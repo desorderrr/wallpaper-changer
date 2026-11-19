@@ -522,6 +522,8 @@ def main() -> None:
     config.ensure_dirs()
     config.load_settings()
     _ui_queue = queue.Queue()
+    if "--settings" in sys.argv:  # abrir as definições ao arrancar
+        _ui_queue.put("settings")
 
     # Em macOS o Tk e o pystray partilham o mesmo NSApplication: a janela
     # principal é criada primeiro e a tray integra-se no loop do Tk.

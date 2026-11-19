@@ -75,7 +75,8 @@ Binário: `bash scripts/build_linux.sh` (cria `dist/wallpaper-changer`).
 
 ```bash
 pip install -e .
-python -m wallpaper_changer      # ou: wallpaper-changer
+python -m wallpaper_changer              # arranca na bandeja
+python -m wallpaper_changer --settings   # abre logo as definições
 ```
 
 ## Configurar o Unsplash (1 minuto)
