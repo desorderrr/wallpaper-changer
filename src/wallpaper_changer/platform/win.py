@@ -58,17 +58,21 @@ class Platform(BasePlatform):
         from ..config import self_command
 
         try:
-            with winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE
-            ) as k:
-                if enable:
+            if enable:
+                # CreateKeyEx porque em perfis novos a chave Run pode não existir
+                with winreg.CreateKeyEx(
+                    winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE
+                ) as k:
                     value = subprocess.list2cmdline(self_command())
                     winreg.SetValueEx(k, RUN_VALUE, 0, winreg.REG_SZ, value)
-                else:
-                    try:
+            else:
+                try:
+                    with winreg.OpenKey(
+                        winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE
+                    ) as k:
                         winreg.DeleteValue(k, RUN_VALUE)
-                    except OSError:
-                        pass
+                except FileNotFoundError:
+                    pass
             return True
         except OSError:
             return False
