@@ -3,6 +3,12 @@ import sys
 
 import pytest
 
+if os.environ.get("WPC_SKIP_UI_TESTS"):
+    pytest.skip(
+        "UI desativada neste ambiente (WPC_SKIP_UI_TESTS=1)",
+        allow_module_level=True,
+    )
+
 customtkinter = pytest.importorskip("customtkinter")
 pytest.importorskip("tkinter")
 

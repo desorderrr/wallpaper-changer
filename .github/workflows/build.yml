@@ -17,6 +17,7 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-22.04, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,8 +39,14 @@ jobs:
         if: runner.os == 'Linux'
         run: xvfb-run -a pytest -q
 
-      - name: Testes (Windows/macOS)
-        if: runner.os != 'Linux'
+      - name: Testes (macOS)
+        if: runner.os == 'macOS'
+        env:
+          WPC_SKIP_UI_TESTS: "1"
+        run: pytest -q
+
+      - name: Testes (Windows)
+        if: runner.os == 'Windows'
         run: pytest -q
 
   build:
@@ -56,6 +63,7 @@ jobs:
           - os: macos-latest
             artifact: WallpaperChanger-macos
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -66,7 +74,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-tk libgtk-3-0
+          sudo apt-get install -y python3-tk libgtk-3-0 zip
 
       - name: Instalar dependências
         run: |
@@ -78,32 +86,38 @@ jobs:
 
       - name: Build Windows
         if: runner.os == 'Windows'
-        run: >
-          python -m PyInstaller --noconfirm --onefile --windowed
-          --name WallpaperChanger --icon icon.ico
-          --hidden-import pystray._win32
-          --collect-all customtkinter --paths src scripts/launcher.py
+        run: |
+          python -m PyInstaller --noconfirm --onefile --windowed `
+            --name WallpaperChanger --icon icon.ico `
+            --hidden-import pystray._win32 `
+            --collect-all customtkinter --paths src scripts/launcher.py
+          Compress-Archive -Path dist\WallpaperChanger.exe `
+            -DestinationPath dist\WallpaperChanger-windows.zip
 
       - name: Build Linux
         if: runner.os == 'Linux'
-        run: >
-          python -m PyInstaller --noconfirm --onefile
-          --name wallpaper-changer
-          --hidden-import pystray._xorg
-          --collect-all customtkinter --paths src scripts/launcher.py
+        run: |
+          python -m PyInstaller --noconfirm --onefile \
+            --name wallpaper-changer \
+            --hidden-import pystray._xorg \
+            --collect-all customtkinter --paths src scripts/launcher.py
+          chmod +x dist/wallpaper-changer
+          (cd dist && zip WallpaperChanger-linux.zip wallpaper-changer)
 
       - name: Build macOS
         if: runner.os == 'macOS'
-        run: >
-          python -m PyInstaller --noconfirm --onefile --windowed
-          --name WallpaperChanger --icon icon.icns
-          --hidden-import pystray._darwin
-          --collect-all customtkinter --paths src scripts/launcher.py
+        run: |
+          python -m PyInstaller --noconfirm --onefile --windowed \
+            --name WallpaperChanger --icon icon.icns \
+            --hidden-import pystray._darwin \
+            --collect-all customtkinter --paths src scripts/launcher.py
+          ditto -c -k --sequesterRsrc --keepParent \
+            dist/WallpaperChanger.app dist/WallpaperChanger-macos.zip
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: dist/
+          path: dist/*.zip
           if-no-files-found: error
 
   release:
@@ -116,13 +130,11 @@ jobs:
         with:
           path: artifacts
 
-      - name: Empacotar
+      - name: Reunir zips
         run: |
           cd artifacts
-          for d in */; do
-            name="${d%/}"
-            (cd "$d" && zip -r "../${name}.zip" .)
-          done
+          find . -name '*.zip' -exec mv {} . \;
+          ls -la *.zip
 
       - uses: softprops/action-gh-release@v2
         with:
