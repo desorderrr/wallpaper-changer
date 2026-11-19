@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+*.spec
+.pytest_cache/
+
+# Ambientes
+.venv/
+venv/
+.venv*/
+
+# Artefactos gerados
+icon.ico
+icon.png
+icon.icns
+Icon?
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db

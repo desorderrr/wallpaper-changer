@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Testes (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dependências de sistema (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk xvfb libgtk-3-0
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Testes (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a pytest -q
+
+      - name: Testes (Windows/macOS)
+        if: runner.os != 'Linux'
+        run: pytest -q
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: WallpaperChanger-windows
+          - os: ubuntu-22.04
+            artifact: WallpaperChanger-linux
+          - os: macos-latest
+            artifact: WallpaperChanger-macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dependências de sistema (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk libgtk-3-0
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Ícones
+        run: python scripts/make_icon.py
+
+      - name: Build Windows
+        if: runner.os == 'Windows'
+        run: >
+          python -m PyInstaller --noconfirm --onefile --windowed
+          --name WallpaperChanger --icon icon.ico
+          --hidden-import pystray._win32
+          --collect-all customtkinter --paths src scripts/launcher.py
+
+      - name: Build Linux
+        if: runner.os == 'Linux'
+        run: >
+          python -m PyInstaller --noconfirm --onefile
+          --name wallpaper-changer
+          --hidden-import pystray._xorg
+          --collect-all customtkinter --paths src scripts/launcher.py
+
+      - name: Build macOS
+        if: runner.os == 'macOS'
+        run: >
+          python -m PyInstaller --noconfirm --onefile --windowed
+          --name WallpaperChanger --icon icon.icns
+          --hidden-import pystray._darwin
+          --collect-all customtkinter --paths src scripts/launcher.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Empacotar
+        run: |
+          cd artifacts
+          for d in */; do
+            name="${d%/}"
+            (cd "$d" && zip -r "../${name}.zip" .)
+          done
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.zip
+          generate_release_notes: true
