@@ -336,17 +336,19 @@ def _notify(icon, msg: str) -> None:
 
 
 def _apply_settings(values: dict) -> str | None:
-    config.set_key("use_unsplash", values["use_unsplash"])
-    config.set_key("use_bing", values["use_bing"])
-    config.set_key("use_wallhaven", values.get("use_wallhaven", False))
-    config.set_key("paused", values.get("paused", False))
-    config.set_key("unsplash_key", values["unsplash_key"])
-    config.set_key("theme_mode", values["theme_mode"])
-    config.set_key("interval", values["interval"])
-    config.set_key("change_on_start", values["change_on_start"])
-    config.set_key("keep", values["keep"])
-    config.set_key("queries_dark", values["queries_dark"])
-    config.set_key("queries_light", values["queries_light"])
+    config.set_many({
+        "use_unsplash": values["use_unsplash"],
+        "use_bing": values["use_bing"],
+        "use_wallhaven": values.get("use_wallhaven", False),
+        "paused": values.get("paused", False),
+        "unsplash_key": values["unsplash_key"],
+        "theme_mode": values["theme_mode"],
+        "interval": values["interval"],
+        "change_on_start": values["change_on_start"],
+        "keep": values["keep"],
+        "queries_dark": values["queries_dark"],
+        "queries_light": values["queries_light"],
+    })
     if values["startup"] != platform.startup_enabled():
         if not platform.set_startup(values["startup"]):
             return "Não consegui alterar o arranque automático do sistema."

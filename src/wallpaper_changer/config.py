@@ -164,9 +164,23 @@ def get(key):
         return _settings.get(key)
 
 
+def _validated(key, value):
+    """Normaliza valores problemáticos antes de gravar."""
+    if key in ("queries_dark", "queries_light"):
+        if not isinstance(value, list) or not value:
+            return list(DEFAULTS[key])
+    return value
+
+
 def set_key(key, value) -> None:
+    set_many({key: value})
+
+
+def set_many(values: dict) -> None:
+    """Atualiza várias keys e grava o ficheiro uma única vez."""
     with _lock:
-        _settings[key] = value
+        for key, value in values.items():
+            _settings[key] = _validated(key, value)
     save_settings()
 
 

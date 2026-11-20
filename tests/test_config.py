@@ -64,3 +64,23 @@ def test_new_defaults_and_intervals(data_dir):
     assert "5m" in config.INTERVALS
     assert "12h" in config.INTERVALS
     assert len(config.INTERVAL_LABELS) == len(config.INTERVALS) + 1  # + startup_only
+
+
+def test_set_many_writes_once(data_dir, monkeypatch):
+    writes = []
+    monkeypatch.setattr(config, "save_settings", lambda: writes.append(1))
+    config.set_many({"interval": "3h", "keep": 9, "theme_mode": "dark"})
+    assert writes == [1]
+    assert config.get("interval") == "3h"
+    assert config.get("keep") == 9
+    assert config.get("theme_mode") == "dark"
+
+
+def test_empty_queries_fall_back_to_defaults(data_dir):
+    config.set_key("queries_dark", [])
+    assert config.get("queries_dark") == config.DEFAULTS["queries_dark"]
+    config.set_key("queries_light", "não é uma lista")
+    assert config.get("queries_light") == config.DEFAULTS["queries_light"]
+    config.load_settings()
+    assert config.get("queries_dark") == config.DEFAULTS["queries_dark"]
+    assert config.get("queries_light") == config.DEFAULTS["queries_light"]
