@@ -42,11 +42,17 @@ def test_settings_window_builds_and_saves(data_dir):
             change_wallpaper=lambda manual: (True, "ok"),
             status_text=lambda: "Tema atual: escuro",
             open_folder=lambda: None,
+            preview_candidate=lambda: (True, "ok", None),
+            apply_image=lambda p: (True, "ok"),
+            list_recent=lambda: [],
         )
         root.update_idletasks()
         assert win.winfo_exists()
         assert "Defini" in win.title()
         assert win.var_interval.get() in win._label_to_value
+        assert hasattr(win, "var_wallhaven")
+        assert hasattr(win, "var_paused")
+        assert win.tabs.tab("Pré-visualizar") is not None
 
         # escolher um intervalo pelo nome e garantir que grava o id correto
         win.var_interval.set("Cada 1 hora")
@@ -55,6 +61,8 @@ def test_settings_window_builds_and_saves(data_dir):
         assert saved["interval"] == "1h"
         assert saved["theme_mode"] in ("auto", "dark", "light")
         assert isinstance(saved["queries_dark"], list)
+        assert isinstance(saved["use_wallhaven"], bool)
+        assert isinstance(saved["paused"], bool)
         assert closed == [1]
     finally:
         try:

@@ -36,3 +36,17 @@ def run(args: list[str], timeout: int = 20) -> tuple[bool, str]:
         return p.returncode == 0, out.strip()
     except (OSError, subprocess.SubprocessError) as e:
         return False, str(e)
+
+
+def theme_is_light(apps_value: int | None, system_value: int | None) -> bool:
+    """Decide o modo claro/escuro a partir das chaves do Windows.
+
+    O "modo das aplicações" (AppsUseLightTheme) é o que a maioria dos
+    utilizadores muda em Definições → Cores, por isso tem prioridade;
+    o "modo do Windows" (SystemUsesLightTheme) é o fallback.
+    """
+    if apps_value is not None:
+        return bool(apps_value)
+    if system_value is not None:
+        return bool(system_value)
+    return True

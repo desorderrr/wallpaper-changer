@@ -11,19 +11,23 @@ Muda o wallpaper automaticamente, **sempre a condizer com o tema do sistema**: m
 ## Funcionalidades
 
 - **Tons escuros/claros garantidos** — a app mede a luminância real de cada imagem antes de a aplicar; nunca põe um wallpaper claro em modo escuro (nem o contrário)
-- **Segue o tema do sistema** — Windows (`SystemUsesLightTheme`), macOS (`AppleInterfaceStyle`) e Linux (GNOME, KDE, XFCE, Cinnamon, MATE). Ao mudar o tema, o wallpaper troca em segundos
-- **Duas fontes de imagens**
+- **Segue o tema do sistema** — no Windows lê o "modo das aplicações" (`AppsUseLightTheme`) e o "modo do Windows"; deteta também macOS e Linux (GNOME, KDE, XFCE, Cinnamon, MATE). Ao mudar o tema, o wallpaper troca em segundos
+- **Pré-visualização tipo Wally** — separador com o wallpaper atual em grande, galeria das imagens recentes (clica para pré-visualizar), botão **Nova sugestão** (procura uma imagem nova sem aplicar) e **Aplicar no ambiente de trabalho**
+- **Três fontes de imagens**
   - [Unsplash](https://unsplash.com/developers) — API oficial, necessita de uma *Access Key* gratuita
-  - [Bing Photo of the Day](https://www.bing.com) — sem registo, funciona logo
-- **Intervalos**: apenas ao iniciar, 15 min, 30 min, 1 h, 3 h, 6 h ou diário
+  - [Wallhaven](https://wallhaven.cc) — milhões de wallpapers em 2K+, **sem key**
+  - [Bing Photo of the Day](https://www.bing.com) — sem registo, com variedade dos últimos 8 dias
+  - **Escolhe só uma fonte ou combina várias** (checkboxes independentes)
+- **Intervalos**: apenas ao iniciar, 5, 10, 15, 30 minutos, 1, 2, 3, 6, 12 horas ou diário
+- **Pausar mudanças automáticas** — pausa sem fechar a app; o "Mudar agora" continua a funcionar
 - **Arranque automático** com o sistema (Registo no Windows, LaunchAgent no macOS, autostart XDG no Linux)
 - **Interface moderna** (customtkinter) em modo escuro/claro automático
 - **Instância única**, atualização dos wallpapers com proteção contra trocas simultâneas e limpeza automática das imagens antigas
 - Guarda as últimas N imagens na pasta de dados, com pesquisas configuráveis por tom
 
-| Pesquisas | Sobre |
-|---|---|
-| ![Pesquisas](docs/screenshot-pesquisas.png) | ![Sobre](docs/screenshot-sobre.png) |
+| Pré-visualização | Pesquisas | Sobre |
+|---|---|---|
+| ![Pré-visualização](docs/screenshot-preview.png) | ![Pesquisas](docs/screenshot-pesquisas.png) | ![Sobre](docs/screenshot-sobre.png) |
 
 ## Instalação
 
@@ -86,7 +90,7 @@ python -m wallpaper_changer --settings   # abre logo as definições
 3. Copia a **Access Key**
 4. Na app: **Definições → Fontes de imagens** → cola a chave → **Gravar**
 
-Sem chave, a app usa apenas o Bing (1 foto por dia). As tuas definições ficam em:
+Sem chave, a app usa apenas o Wallhaven e o Bing (que não precisam de registo). As tuas definições ficam em:
 
 | Sistema | Pasta |
 |---|---|
@@ -108,7 +112,7 @@ src/wallpaper_changer/
 ├── app.py          # tray, agendador, lógica de troca, instância única
 ├── ui.py           # janela de definições (customtkinter)
 ├── config.py       # settings, caminhos, migrações
-├── sources.py      # Unsplash + Bing
+├── sources.py      # Unsplash + Wallhaven + Bing
 ├── tone.py         # luminância / correspondência de tom
 ├── assets.py       # ícone gerado em código
 └── platform/
@@ -127,8 +131,8 @@ git tag v2.0.0 && git push origin v2.0.0
 
 | Plataforma | Testes automáticos | Execução real |
 |---|---|---|
-| Windows 11 | ✅ 29 testes | ✅ testado |
-| Linux (Ubuntu 26.04, WSL) | ✅ 26 testes (UI saltada sem tkinter) | 🟡 falta testar a bandeja num desktop real |
+| Windows 11 | ✅ 41 testes | ✅ testado |
+| Linux (Ubuntu 26.04, WSL) | ✅ 38 testes (UI saltada sem tkinter) | 🟡 falta testar a bandeja num desktop real |
 | macOS | ✅ CI compila e corre os testes | 🧪 falta testar no MacBook |
 
 ## Licença

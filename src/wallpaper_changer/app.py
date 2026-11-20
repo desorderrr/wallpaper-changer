@@ -57,6 +57,7 @@ state: dict = {
     "last_change": None,
     "last_tone": None,
     "last_source": None,
+    "last_path": None,
     "last_error": None,
 }
 
@@ -88,8 +89,14 @@ def status_text() -> str:
         "light": "sempre claro",
     }.get(get("theme_mode"), "segue o sistema")
     parts = ["Tema atual: %s (%s)" % (tone_name, mode)]
+    if get("paused"):
+        parts.append("mudanças automáticas em pausa")
     if state["last_source"]:
-        src = "Unsplash" if state["last_source"] == "unsplash" else "Bing"
+        src = {
+            "unsplash": "Unsplash",
+            "bing": "Bing",
+            "wallhaven": "Wallhaven",
+        }.get(state["last_source"], state["last_source"])
         parts.append("última fonte: %s" % src)
     if state["last_change"]:
         parts.append("última troca: %s" % state["last_change"].strftime("%d/%m %H:%M"))
@@ -120,38 +127,44 @@ def cleanup_images() -> None:
         pass
 
 
+def _enabled_sources(want_dark: bool) -> list[tuple[str, str, object]]:
+    """(id, nome, função de fetch) das fontes ativas, por ordem aleatória."""
+    entries: list[tuple[str, str, object]] = []
+    if get("use_unsplash"):
+        entries.append(("unsplash", "Unsplash", sources.fetch_unsplash))
+    if get("use_wallhaven"):
+        entries.append(("wallhaven", "Wallhaven", sources.fetch_wallhaven))
+    if get("use_bing"):
+        entries.append(("bing", "Bing", sources.fetch_bing))
+    random.shuffle(entries)
+    return entries
+
+
 def change_wallpaper(manual: bool = False) -> tuple[bool, str]:
     """Troca o wallpaper respeitando o tema. Devolve (sucesso, mensagem)."""
     if not _change_lock.acquire(blocking=False):
         return False, "Já existe uma troca de wallpaper em curso."
     try:
-        return _do_change()
+        return _do_change(manual=manual)
     finally:
         _change_lock.release()
 
 
-def _do_change() -> tuple[bool, str]:
+def _do_change(manual: bool = False) -> tuple[bool, str]:
+    if get("paused") and not manual:
+        return False, "Mudanças automáticas em pausa."
+
     want_dark = effective_theme_is_dark()
     tone_name = "escuro" if want_dark else "claro"
 
-    enabled = []
-    if get("use_unsplash"):
-        enabled.append("unsplash")
-    if get("use_bing"):
-        enabled.append("bing")
+    enabled = _enabled_sources(want_dark)
     if not enabled:
-        return False, "Nenhuma fonte ativa. Ativa o Unsplash ou o Bing."
-    random.shuffle(enabled)
+        return False, "Nenhuma fonte ativa. Ativa o Unsplash, o Bing ou o Wallhaven."
 
     last_error = ""
-    for src in enabled:
+    for src, name, fetch in enabled:
         try:
-            if src == "unsplash":
-                data = sources.fetch_unsplash(want_dark)
-                name = "Unsplash"
-            else:
-                data = sources.fetch_bing()
-                name = "Bing"
+            data = fetch(want_dark)
 
             luma = tone.mean_luminance(data)
             config.log("Fonte %s: luma=%.0f (queria %s)" % (name, luma, tone_name))
@@ -166,18 +179,86 @@ def _do_change() -> tuple[bool, str]:
                 last_change=datetime.now(),
                 last_tone=tone_name,
                 last_source=src,
+                last_path=str(path),
                 last_error=None,
             )
             config.log("Wallpaper %s aplicado: %s" % (tone_name, path))
             return True, "Wallpaper %s aplicado (%s)." % (tone_name, name)
         except Exception as e:  # noqa: BLE001 - qualquer fonte pode falhar
-            last_error = "%s: %s" % (src, e)
-            config.log("Erro em %s: %r" % (src, e))
+            last_error = "%s: %s" % (name, e)
+            config.log("Erro em %s: %r" % (name, e))
 
     msg = "Não consegui obter uma imagem %s agora. %s" % (tone_name, last_error)
     state["last_error"] = msg
     config.log(msg)
     return False, msg
+
+
+def _source_key(path) -> str:
+    """Extrai a fonte do nome do ficheiro (ex.: preview_unsplash_2026...)."""
+    stem = path.stem
+    if stem.startswith("preview_"):
+        stem = stem[len("preview_"):]
+    return stem.split("_", 1)[0]
+
+
+def obtain_candidate() -> tuple[bool, str, str | None]:
+    """Obtém uma imagem (sem aplicar) para a pré-visualização."""
+    want_dark = effective_theme_is_dark()
+    tone_name = "escuro" if want_dark else "claro"
+    enabled = _enabled_sources(want_dark)
+    if not enabled:
+        return False, "Nenhuma fonte ativa. Ativa o Unsplash, o Bing ou o Wallhaven.", None
+
+    errors: list[str] = []
+    for src, name, fetch in enabled:
+        try:
+            data = fetch(want_dark)
+            if not tone.tone_matches(tone.mean_luminance(data), want_dark):
+                errors.append("%s: tom errado" % name)
+                continue
+            path = save_image(data, "preview_" + src)
+            return True, "Sugestão do %s (tom %s)." % (name, tone_name), str(path)
+        except Exception as e:  # noqa: BLE001
+            errors.append("%s: %s" % (name, e))
+            config.log("Erro na sugestão (%s): %r" % (name, e))
+    return False, "Não consegui obter uma sugestão. " + "; ".join(errors[-2:]), None
+
+
+def apply_file(path) -> tuple[bool, str]:
+    """Aplica um ficheiro de imagem já existente."""
+    from pathlib import Path as _Path
+
+    path = _Path(path)
+    try:
+        platform.set_wallpaper(path)
+        cleanup_images()
+        tone_name = "escuro" if effective_theme_is_dark() else "claro"
+        state.update(
+            last_change=datetime.now(),
+            last_tone=tone_name,
+            last_source=_source_key(path),
+            last_path=str(path),
+            last_error=None,
+        )
+        config.log("Wallpaper aplicado manualmente: %s" % path)
+        return True, "Wallpaper aplicado."
+    except Exception as e:  # noqa: BLE001
+        config.log("Erro ao aplicar %s: %r" % (path, e))
+        return False, "Não consegui aplicar o wallpaper: %s" % e
+
+
+def list_recent_images(limit: int = 24) -> list:
+    """Imagens guardadas, da mais recente para a mais antiga."""
+    try:
+        files = sorted(
+            config.image_dir().glob("*.jpg"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        return files[:limit]
+    except OSError:
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +273,9 @@ def scheduler_loop() -> None:
             continue
         if _wake.wait(INTERVALS[interval]):
             _wake.clear()
+            continue
+        if get("paused"):
+            config.log("Mudanças automáticas em pausa; ciclo ignorado")
             continue
         config.log("Ciclo agendado (%s)" % interval)
         ok, msg = change_wallpaper()
@@ -230,6 +314,8 @@ def _notify(icon, msg: str) -> None:
 def _apply_settings(values: dict) -> str | None:
     config.set_key("use_unsplash", values["use_unsplash"])
     config.set_key("use_bing", values["use_bing"])
+    config.set_key("use_wallhaven", values.get("use_wallhaven", False))
+    config.set_key("paused", values.get("paused", False))
     config.set_key("unsplash_key", values["unsplash_key"])
     config.set_key("theme_mode", values["theme_mode"])
     config.set_key("interval", values["interval"])
@@ -294,6 +380,15 @@ def build_menu():
     def toggle_change_on_start(icon, item=None):
         config.set_key("change_on_start", not get("change_on_start"))
 
+    def toggle_pause(icon, item=None):
+        config.set_key("paused", not get("paused"))
+        _wake.set()
+        _notify(
+            icon,
+            "Mudanças automáticas: %s"
+            % ("EM PAUSA" if get("paused") else "ATIVAS"),
+        )
+
     def toggle_source(key):
         def handler(icon, item=None):
             config.set_key(key, not get(key))
@@ -302,6 +397,10 @@ def build_menu():
 
     return pystray.Menu(
         pystray.MenuItem("Mudar agora", change_now, default=True),
+        pystray.MenuItem(
+            "Pausar mudanças automáticas", toggle_pause,
+            checked=lambda item: bool(get("paused")),
+        ),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem(
             "Intervalo",
@@ -340,6 +439,10 @@ def build_menu():
                 pystray.MenuItem(
                     "Bing Photo of the Day", toggle_source("use_bing"),
                     checked=lambda item: bool(get("use_bing")),
+                ),
+                pystray.MenuItem(
+                    "Wallhaven (sem key)", toggle_source("use_wallhaven"),
+                    checked=lambda item: bool(get("use_wallhaven")),
                 ),
             ),
         ),
@@ -410,6 +513,9 @@ def _open_settings(root) -> None:
             change_wallpaper=change_wallpaper,
             status_text=status_text,
             open_folder=open_image_folder,
+            preview_candidate=obtain_candidate,
+            apply_image=apply_file,
+            list_recent=list_recent_images,
         )
         _settings_win.set_header_provider(status_text)
     except Exception:

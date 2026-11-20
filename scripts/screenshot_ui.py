@@ -104,18 +104,22 @@ def main() -> None:
         change_wallpaper=lambda manual: (True, "ok"),
         status_text=status_text,
         open_folder=open_image_folder,
+        preview_candidate=lambda: (False, "", None),
+        apply_image=lambda path: (True, "ok"),
+        list_recent=__import__("wallpaper_changer.app", fromlist=["app"]).list_recent_images,
     )
     win.set_header_provider(status_text)
     win.deiconify()
     win.lift()
     win.attributes("-topmost", True)
-    win.geometry("700x660+80+80")
-    for _ in range(30):
+    win.geometry("780x740+80+80")
+    for _ in range(40):
         root.update()
         time.sleep(0.1)
 
     for tab, filename in (
         ("Geral", "docs/screenshot%s.png" % suffix),
+        ("Pré-visualizar", "docs/screenshot-preview%s.png" % suffix),
         ("Pesquisas", "docs/screenshot-pesquisas%s.png" % suffix),
         ("Sobre", "docs/screenshot-sobre%s.png" % suffix),
     ):

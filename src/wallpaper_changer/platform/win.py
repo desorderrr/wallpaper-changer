@@ -8,7 +8,7 @@ import subprocess
 import winreg
 from pathlib import Path
 
-from .base import BasePlatform
+from .base import BasePlatform, theme_is_light
 
 PERSONALIZE_KEY = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
@@ -19,6 +19,14 @@ SPIF_UPDATEINIFILE = 0x01
 SPIF_SENDCHANGE = 0x02
 
 
+def _read_dword(key, name: str) -> int | None:
+    try:
+        value, _ = winreg.QueryValueEx(key, name)
+        return int(value)
+    except OSError:
+        return None
+
+
 class Platform(BasePlatform):
     name = "Windows"
 
@@ -26,11 +34,9 @@ class Platform(BasePlatform):
     def is_light_theme(self) -> bool:
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, PERSONALIZE_KEY) as k:
-                try:
-                    val, _ = winreg.QueryValueEx(k, "SystemUsesLightTheme")
-                except OSError:
-                    val, _ = winreg.QueryValueEx(k, "AppsUseLightTheme")
-                return bool(val)
+                apps = _read_dword(k, "AppsUseLightTheme")
+                system = _read_dword(k, "SystemUsesLightTheme")
+                return theme_is_light(apps, system)
         except OSError:
             return True
 

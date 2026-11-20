@@ -10,6 +10,20 @@ def test_platform_selection():
     assert platform_mod.platform.name == expected
 
 
+def test_theme_is_light_prefers_apps_mode():
+    from wallpaper_changer.platform.base import theme_is_light
+
+    # "modo das aplicações" tem prioridade sobre o "modo do Windows"
+    assert theme_is_light(1, 0) is True
+    assert theme_is_light(0, 1) is False
+    assert theme_is_light(1, 1) is True
+    assert theme_is_light(0, 0) is False
+    # fallback quando a chave das apps não existe
+    assert theme_is_light(None, 1) is True
+    assert theme_is_light(None, 0) is False
+    assert theme_is_light(None, None) is True
+
+
 # --- Linux (funções puras) ------------------------------------------------
 def test_parse_color_scheme():
     from wallpaper_changer.platform.linux import parse_color_scheme

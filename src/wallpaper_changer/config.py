@@ -10,13 +10,15 @@ from datetime import datetime
 from pathlib import Path
 
 APP_NAME = "WallpaperChanger"
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.1.0"
 
 DEFAULTS = {
-    "interval": "daily",           # startup_only | 15m | 30m | 1h | 3h | 6h | daily
+    "interval": "daily",           # startup_only | 5m | 10m | 15m | 30m | 1h | 2h | 3h | 6h | 12h | daily
     "theme_mode": "auto",          # auto (segue o sistema) | dark | light
     "use_unsplash": True,
     "use_bing": True,
+    "use_wallhaven": False,
+    "paused": False,               # pausa as mudanças automáticas
     "change_on_start": True,
     "unsplash_key": "",
     "keep": 20,
@@ -35,21 +37,29 @@ DEFAULTS = {
 }
 
 INTERVALS = {
+    "5m": 5 * 60,
+    "10m": 10 * 60,
     "15m": 15 * 60,
     "30m": 30 * 60,
     "1h": 60 * 60,
+    "2h": 2 * 60 * 60,
     "3h": 3 * 60 * 60,
     "6h": 6 * 60 * 60,
+    "12h": 12 * 60 * 60,
     "daily": 24 * 60 * 60,
 }
 
 INTERVAL_LABELS = [
     ("startup_only", "Apenas ao iniciar"),
+    ("5m", "Cada 5 minutos"),
+    ("10m", "Cada 10 minutos"),
     ("15m", "Cada 15 minutos"),
     ("30m", "Cada 30 minutos"),
     ("1h", "Cada 1 hora"),
+    ("2h", "Cada 2 horas"),
     ("3h", "Cada 3 horas"),
     ("6h", "Cada 6 horas"),
+    ("12h", "Cada 12 horas"),
     ("daily", "Diário"),
 ]
 

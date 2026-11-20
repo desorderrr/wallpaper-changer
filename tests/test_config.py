@@ -56,3 +56,11 @@ def test_keep_validation(data_dir):
     )
     config.load_settings()
     assert config.get("keep") == 200
+
+
+def test_new_defaults_and_intervals(data_dir):
+    assert config.get("use_wallhaven") is False
+    assert config.get("paused") is False
+    assert "5m" in config.INTERVALS
+    assert "12h" in config.INTERVALS
+    assert len(config.INTERVAL_LABELS) == len(config.INTERVALS) + 1  # + startup_only

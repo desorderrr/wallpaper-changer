@@ -8,12 +8,12 @@ def test_scheduler_fires_and_stops(data_dir, monkeypatch):
     calls = []
     monkeypatch.setitem(app.INTERVALS, "15m", 1)
     monkeypatch.setattr(
-        app, "change_wallpaper", lambda: calls.append(1) or (True, "")
+        app, "change_wallpaper", lambda **k: calls.append(1) or (True, "")
     )
+    config.set_key("paused", False)
     config.set_key("interval", "15m")
 
-    t = threading.Thread(target=app.scheduler_loop, daemon=True)
-    t.start()
+    threading.Thread(target=app.scheduler_loop, daemon=True).start()
     time.sleep(3.5)
     assert calls, "o agendador devia ter disparado"
 
@@ -25,5 +25,27 @@ def test_scheduler_fires_and_stops(data_dir, monkeypatch):
         time.sleep(2)
         assert len(calls) == n, "não devia disparar em 'apenas ao iniciar'"
     finally:
-        # deixa a thread parada para não interferir com outros testes
         app._wake.set()
+
+
+def test_scheduler_does_not_fire_when_paused(data_dir, monkeypatch):
+    calls = []
+    monkeypatch.setitem(app.INTERVALS, "5m", 1)
+    monkeypatch.setattr(
+        app, "change_wallpaper", lambda **k: calls.append(1) or (True, "")
+    )
+    config.set_key("paused", True)
+    config.set_key("interval", "5m")
+
+    threaded = False
+    try:
+        threading.Thread(target=app.scheduler_loop, daemon=True).start()
+        threaded = True
+        time.sleep(3)
+        assert not calls, "em pausa o agendador não deve mudar o wallpaper"
+    finally:
+        config.set_key("interval", "startup_only")
+        config.set_key("paused", False)
+        app._wake.set()
+        if threaded:
+            time.sleep(0.3)
