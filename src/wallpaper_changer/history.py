@@ -125,23 +125,28 @@ def is_duplicate(data: bytes) -> bool:
     return False
 
 
+def _build_item(data: bytes, source: str, path=None) -> dict:
+    sha = _sha(data)
+    ah, luma = _fingerprint(data)
+    return {
+        "sha": sha,
+        "ahash": ah,
+        "luma": luma,
+        "source": source,
+        "ts": datetime.now().isoformat(timespec="seconds"),
+        "path": str(path) if path else "",
+    }
+
+
 def add(data: bytes, source: str, path=None) -> None:
     """Regista uma imagem como usada."""
     try:
-        sha = _sha(data)
-        ah, luma = _fingerprint(data)
+        item = _build_item(data, source, path)
     except (OSError, ValueError):
         return
     with _lock:
         items = _load()
-        items.append({
-            "sha": sha,
-            "ahash": ah,
-            "luma": luma,
-            "source": source,
-            "ts": datetime.now().isoformat(timespec="seconds"),
-            "path": str(path) if path else "",
-        })
+        items.append(item)
         del items[:-MAX_ITEMS]
         _save()
 
@@ -176,7 +181,6 @@ def seed_from_folder() -> int:
     with _lock:
         if _load():
             return 0
-    added = 0
     try:
         files = sorted(
             config.image_dir().glob("*.jpg"),
@@ -184,7 +188,17 @@ def seed_from_folder() -> int:
         )
     except OSError:
         return 0
+    new_items = []
     for path in files[-MAX_ITEMS:]:
-        add_path(path, "existing")
-        added += 1
-    return added
+        try:
+            new_items.append(_build_item(path.read_bytes(), "existing", path))
+        except (OSError, ValueError):
+            continue
+    if not new_items:
+        return 0
+    with _lock:
+        items = _load()
+        items.extend(new_items)
+        del items[:-MAX_ITEMS]
+        _save()
+    return len(new_items)
