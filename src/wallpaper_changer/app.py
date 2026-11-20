@@ -16,7 +16,7 @@ from datetime import datetime
 
 from PIL import Image
 
-from . import config, sources, tone
+from . import config, history, sources, tone
 from .assets import make_icon_image
 from .config import APP_NAME, APP_VERSION, INTERVALS, get
 from .platform import platform
@@ -171,10 +171,15 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
             if not tone.tone_matches(luma, want_dark):
                 last_error = "%s devolveu uma imagem com o tom errado" % name
                 continue
+            if history.is_duplicate(data):
+                last_error = "%s devolveu um wallpaper repetido" % name
+                config.log("Repetido de %s ignorado" % name)
+                continue
 
             path = save_image(data, src)
             platform.set_wallpaper(path)
             cleanup_images()
+            history.add(data, src, path)
             state.update(
                 last_change=datetime.now(),
                 last_tone=tone_name,
@@ -233,6 +238,7 @@ def apply_file(path) -> tuple[bool, str]:
     try:
         platform.set_wallpaper(path)
         cleanup_images()
+        history.add_path(path, _source_key(path))
         tone_name = "escuro" if effective_theme_is_dark() else "claro"
         state.update(
             last_change=datetime.now(),
@@ -249,16 +255,34 @@ def apply_file(path) -> tuple[bool, str]:
 
 
 def list_recent_images(limit: int = 24) -> list:
-    """Imagens guardadas, da mais recente para a mais antiga."""
+    """Imagens guardadas (sem duplicados percetuais), da mais recente."""
     try:
         files = sorted(
             config.image_dir().glob("*.jpg"),
             key=lambda p: p.stat().st_mtime,
             reverse=True,
         )
-        return files[:limit]
     except OSError:
         return []
+
+    unique: list = []
+    seen: list[str] = []
+    for path in files:
+        ah = history.ahash_path(path)
+        if ah:
+            if any(history.is_similar_hash(ah, other) for other in seen):
+                continue
+            seen.append(ah)
+        unique.append(path)
+        if len(unique) >= limit:
+            break
+    return unique
+
+
+def forget_history() -> None:
+    """Esquece os wallpapers usados (permite voltar a vê-los)."""
+    history.reset()
+    config.log("Histórico de wallpapers usados esquecido")
 
 
 # ---------------------------------------------------------------------------
@@ -459,7 +483,16 @@ def build_menu():
         pystray.MenuItem(
             "Definições...", lambda icon, item=None: _ui_queue.put("settings")
         ),
-        pystray.MenuItem("Abrir pasta de imagens", lambda icon, item=None: open_image_folder()),
+        pystray.MenuItem(
+            "Abrir pasta de imagens", lambda icon, item=None: open_image_folder()
+        ),
+        pystray.MenuItem(
+            "Esquecer wallpapers usados",
+            lambda icon, item=None: (
+                forget_history(),
+                _notify(icon, "Histórico de repetições esquecido."),
+            ),
+        ),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem(
             "Sair", lambda icon, item=None: (icon.stop(), _ui_queue.put("quit"))
@@ -516,6 +549,7 @@ def _open_settings(root) -> None:
             preview_candidate=obtain_candidate,
             apply_image=apply_file,
             list_recent=list_recent_images,
+            forget_history=forget_history,
         )
         _settings_win.set_header_provider(status_text)
     except Exception:
@@ -627,6 +661,12 @@ def main() -> None:
 
     config.ensure_dirs()
     config.load_settings()
+    try:
+        seeded = history.seed_from_folder()
+        if seeded:
+            config.log("Histórico inicial: %d imagens existentes marcadas" % seeded)
+    except Exception as e:  # noqa: BLE001
+        config.log("Erro ao semear histórico: %r" % e)
     _ui_queue = queue.Queue()
     if "--settings" in sys.argv:  # abrir as definições ao arrancar
         _ui_queue.put("settings")

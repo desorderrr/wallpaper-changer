@@ -10,7 +10,7 @@ import random
 
 import requests
 
-from . import config, tone
+from . import config, history, tone
 
 UA = {"User-Agent": config.APP_NAME}
 MAX_TONE_TRIES = 6
@@ -22,11 +22,14 @@ def download(url: str, timeout: int = 30) -> bytes:
     return r.content
 
 
-def _matches(data: bytes, want_dark: bool) -> bool:
+def _acceptable(data: bytes, want_dark: bool) -> bool:
+    """Imagem válida, com o tom pedido e que ainda não foi usada."""
     try:
-        return tone.tone_matches(tone.mean_luminance(data), want_dark)
+        if not tone.tone_matches(tone.mean_luminance(data), want_dark):
+            return False
     except Exception:  # noqa: BLE001 - imagem inválida conta como não compatível
         return False
+    return not history.is_duplicate(data)
 
 
 # ---------------------------------------------------------------------------
@@ -77,9 +80,11 @@ def fetch_unsplash(want_dark: bool) -> bytes:
             data = download(photo["urls"]["raw"] + "&w=2560&q=80&fit=max")
         except requests.RequestException:
             continue
-        if _matches(data, want_dark):
+        if _acceptable(data, want_dark):
             return data
-    raise RuntimeError("Unsplash não devolveu fotos com o tom pedido; tenta de novo")
+    raise RuntimeError(
+        "Unsplash não devolveu fotos novas com o tom pedido; tenta de novo"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +100,24 @@ def parse_bing_images(payload: dict) -> list[str]:
     return out
 
 
+def _bing_candidates(payload: dict) -> list[tuple[str | None, str]]:
+    """(thumbnail, imagem completa) de cada dia, com tamanhos adequados."""
+    out: list[tuple[str | None, str]] = []
+    for item in payload.get("images") or []:
+        base = item.get("urlbase")
+        url = item.get("url") or ""
+        if base:
+            thumb = "https://www.bing.com" + base + "_480x270.jpg"
+            full = "https://www.bing.com" + base + "_1920x1080.jpg"
+        elif url:
+            full = ("https://www.bing.com" + url) if url.startswith("/") else url
+            thumb = None
+        else:
+            continue
+        out.append((thumb, full))
+    return out
+
+
 def fetch_bing(want_dark: bool = True) -> bytes:
     """Foto do dia do Bing (sem API key), com variedade dos últimos dias."""
     r = requests.get(
@@ -104,21 +127,30 @@ def fetch_bing(want_dark: bool = True) -> bytes:
         timeout=20,
     )
     r.raise_for_status()
-    urls = parse_bing_images(r.json())
-    if not urls:
+    entries = _bing_candidates(r.json())
+    if not entries:
         raise RuntimeError("Bing não devolveu imagens")
 
-    rest = urls[1:]
-    random.shuffle(rest)
-    candidates = urls[:1] + rest[:2]
-    for url in candidates:
+    head, tail = entries[:1], entries[1:]
+    random.shuffle(tail)
+    for thumb, full in head + tail:
         try:
-            data = download(url.replace("1920x1080", "UHD"))
+            # primeiro o thumbnail (rápido) para verificar tom e repetição
+            if thumb and not _acceptable(download(thumb), want_dark):
+                continue
+            try:
+                data = (
+                    download(full.replace("1920x1080", "UHD"))
+                    if "1920x1080" in full
+                    else download(full)
+                )
+            except requests.RequestException:
+                data = download(full)
         except requests.RequestException:
-            data = download(url)
-        if _matches(data, want_dark):
+            continue
+        if _acceptable(data, want_dark):
             return data
-    raise RuntimeError("Bing não tem imagens desse tom nos últimos dias")
+    raise RuntimeError("Bing não tem imagens novas desse tom nos últimos dias")
 
 
 # ---------------------------------------------------------------------------
@@ -151,11 +183,11 @@ def fetch_wallhaven(want_dark: bool = True) -> bytes:
                 continue
             thumb = (item.get("thumbs") or {}).get("large")
             try:
-                if thumb and not _matches(download(thumb), want_dark):
+                if thumb and not _acceptable(download(thumb), want_dark):
                     continue
                 image = download(url)
             except requests.RequestException:
                 continue
-            if _matches(image, want_dark):
+            if _acceptable(image, want_dark):
                 return image
-    raise RuntimeError("Wallhaven não devolveu imagens com o tom pedido")
+    raise RuntimeError("Wallhaven não devolveu imagens novas com o tom pedido")

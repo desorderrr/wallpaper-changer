@@ -18,6 +18,7 @@ Muda o wallpaper automaticamente, **sempre a condizer com o tema do sistema**: m
   - [Wallhaven](https://wallhaven.cc) — milhões de wallpapers em 2K+, **sem key**
   - [Bing Photo of the Day](https://www.bing.com) — sem registo, com variedade dos últimos 8 dias
   - **Escolhe só uma fonte ou combina várias** (checkboxes independentes)
+- **Sem repetições** — histórico persistente dos wallpapers já usados (hash exato + hash percetual, apanha a mesma foto mesmo recomprimida); cada fonte tenta outras candidatas até encontrar uma nova, e a galeria também esconde duplicados. Há um botão para esquecer o histórico no separador **Sobre**
 - **Intervalos**: apenas ao iniciar, 5, 10, 15, 30 minutos, 1, 2, 3, 6, 12 horas ou diário
 - **Pausar mudanças automáticas** — pausa sem fechar a app; o "Mudar agora" continua a funcionar
 - **Arranque automático** com o sistema (Registo no Windows, LaunchAgent no macOS, autostart XDG no Linux)
@@ -112,6 +113,7 @@ src/wallpaper_changer/
 ├── app.py          # tray, agendador, lógica de troca, instância única
 ├── ui.py           # janela de definições (customtkinter)
 ├── config.py       # settings, caminhos, migrações
+├── history.py      # histórico de wallpapers usados (sem repetições)
 ├── sources.py      # Unsplash + Wallhaven + Bing
 ├── tone.py         # luminância / correspondência de tom
 ├── assets.py       # ícone gerado em código
@@ -131,8 +133,8 @@ git tag v2.0.0 && git push origin v2.0.0
 
 | Plataforma | Testes automáticos | Execução real |
 |---|---|---|
-| Windows 11 | ✅ 41 testes | ✅ testado |
-| Linux (Ubuntu 26.04, WSL) | ✅ 38 testes (UI saltada sem tkinter) | 🟡 falta testar a bandeja num desktop real |
+| Windows 11 | ✅ 48 testes | ✅ testado |
+| Linux (Ubuntu 26.04, WSL) | ✅ 45 testes (UI saltada sem tkinter) | 🟡 falta testar a bandeja num desktop real |
 | macOS | ✅ CI compila e corre os testes | 🧪 falta testar no MacBook |
 
 ## Licença

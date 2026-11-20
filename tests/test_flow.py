@@ -116,6 +116,17 @@ def test_change_lock(data_dir):
         app._change_lock.release()
 
 
+def test_repeated_wallpaper_is_blocked(bing_only, monkeypatch):
+    monkeypatch.setattr(
+        app.sources, "fetch_bing", lambda want_dark=True: img((8, 8, 8)))
+    ok1, _ = app.change_wallpaper()
+    assert ok1
+
+    ok2, msg = app.change_wallpaper()
+    assert not ok2
+    assert "repet" in msg.lower()
+
+
 def test_obtain_candidate_and_apply(bing_only, monkeypatch):
     monkeypatch.setattr(
         app.sources, "fetch_bing", lambda want_dark=True: img((10, 10, 10)))

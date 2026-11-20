@@ -107,6 +107,7 @@ def main() -> None:
         preview_candidate=lambda: (False, "", None),
         apply_image=lambda path: (True, "ok"),
         list_recent=__import__("wallpaper_changer.app", fromlist=["app"]).list_recent_images,
+        forget_history=lambda: None,
     )
     win.set_header_provider(status_text)
     win.deiconify()

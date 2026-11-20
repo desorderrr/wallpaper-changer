@@ -45,6 +45,7 @@ def test_settings_window_builds_and_saves(data_dir):
             preview_candidate=lambda: (True, "ok", None),
             apply_image=lambda p: (True, "ok"),
             list_recent=lambda: [],
+            forget_history=lambda: None,
         )
         root.update_idletasks()
         assert win.winfo_exists()

@@ -53,6 +53,7 @@ class SettingsWindow(ctk.CTkToplevel):
         preview_candidate: Callable[[], tuple[bool, str, str | None]],
         apply_image: Callable[[str], tuple[bool, str]],
         list_recent: Callable[[], list],
+        forget_history: Callable[[], None],
     ):
         super().__init__(master)
         self._on_save = on_save
@@ -61,6 +62,7 @@ class SettingsWindow(ctk.CTkToplevel):
         self._candidate = preview_candidate
         self._apply_image = apply_image
         self._recent = list_recent
+        self._forget_history = forget_history
         self._status_q: queue.Queue = queue.Queue()
 
         self._selected_path: Path | None = None
@@ -105,7 +107,7 @@ class SettingsWindow(ctk.CTkToplevel):
         self._build_general(self.tabs.tab("Geral"))
         self._build_preview(self.tabs.tab("Pré-visualizar"))
         self._build_queries(self.tabs.tab("Pesquisas"))
-        self._build_about(self.tabs.tab("Sobre"), open_folder)
+        self._build_about(self.tabs.tab("Sobre"), open_folder, forget_history)
 
         # --- Rodapé -------------------------------------------------------
         footer = ctk.CTkFrame(self, fg_color="transparent")
@@ -322,7 +324,8 @@ class SettingsWindow(ctk.CTkToplevel):
         self.txt_light.grid(row=5, column=0, sticky="ew", padx=8, pady=(2, 10))
         self.txt_light.insert("1.0", "\n".join(get("queries_light")))
 
-    def _build_about(self, tab, open_folder: Callable[[], None]) -> None:
+    def _build_about(self, tab, open_folder: Callable[[], None],
+                     forget_history: Callable[[], None]) -> None:
         tab.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
             tab, text="WallpaperChanger v%s" % APP_VERSION,
@@ -336,14 +339,30 @@ class SettingsWindow(ctk.CTkToplevel):
                 "claro → wallpapers claros.\n\n"
                 "Fontes: Unsplash (API key gratuita), Wallhaven (sem key) e "
                 "Bing Photo of the Day (sem registo).\n\n"
-                "Plataformas: Windows 11, macOS e Linux.\n\n"
-                "As imagens ficam guardadas na tua pasta de dados."
+                "Os wallpapers já usados ficam guardados num histórico — a app "
+                "nunca repete uma imagem (podes esquecer o histórico aqui em baixo).\n\n"
+                "Plataformas: Windows 11, macOS e Linux."
             ),
         ).grid(row=1, column=0, sticky="w", padx=10, pady=4)
+
+        row = ctk.CTkFrame(tab, fg_color="transparent")
+        row.grid(row=2, column=0, sticky="w", padx=10, pady=(12, 10))
         ctk.CTkButton(
-            tab, text="Abrir pasta de imagens", width=180,
+            row, text="Abrir pasta de imagens", width=180,
             command=open_folder,
-        ).grid(row=2, column=0, sticky="w", padx=10, pady=(12, 10))
+        ).pack(side="left")
+
+        def forget():
+            forget_history()
+            self._set_status("Histórico de wallpapers usados esquecido.")
+            self._refresh_gallery()
+            self._set_preview_status("Histórico esquecido — as imagens podem repetir-se.")
+
+        ctk.CTkButton(
+            row, text="Esquecer wallpapers usados", width=200,
+            fg_color=("gray75", "gray25"), hover_color=("gray65", "gray35"),
+            command=forget,
+        ).pack(side="left", padx=8)
 
     # ------------------------------------------------------------------
     # Pré-visualização
