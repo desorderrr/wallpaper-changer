@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 APP_NAME = "WallpaperChanger"
-APP_VERSION = "2.2.0"
+APP_VERSION = "2.2.1"
 
 DEFAULTS = {
     "interval": "daily",           # startup_only | 5m | 10m | 15m | 30m | 1h | 2h | 3h | 6h | 12h | daily
