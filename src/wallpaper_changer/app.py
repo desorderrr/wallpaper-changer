@@ -8,6 +8,7 @@ import os
 import queue
 import random
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -600,7 +601,7 @@ def acquire_single_instance() -> bool:
     if sys.platform == "win32":
         ERROR_ALREADY_EXISTS = 183
         ctypes.windll.kernel32.CreateMutexW(
-            None, False, "Global\\WallpaperChanger_Mutex"
+            None, False, "Local\\WallpaperChanger_Mutex"
         )
         return ctypes.windll.kernel32.GetLastError() != ERROR_ALREADY_EXISTS
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -624,12 +625,9 @@ def warn_dialog(msg: str) -> None:
                 msg.replace('"', '\\"').replace("\n", "\\n"),
                 APP_NAME,
             )
-            os.system('osascript -e \'%s\'' % script)
+            subprocess.run(["osascript", "-e", script], timeout=10)
         else:
-            os.system(
-                'notify-send "%s" "%s" 2>/dev/null || echo "%s"'
-                % (APP_NAME, msg.replace('"', "'").replace("\n", " "), msg)
-            )
+            subprocess.run(["notify-send", APP_NAME, msg], timeout=10)
     except Exception:
         pass
 
@@ -693,9 +691,15 @@ def main() -> None:
     if sys.platform == "darwin":  # pragma: no cover
         icon.run_detached(setup=on_ready)
     else:
-        threading.Thread(
-            target=icon.run, kwargs={"setup": on_ready}, daemon=True
-        ).start()
+
+        def run_tray():
+            try:
+                icon.run(setup=on_ready)
+            except Exception as e:  # noqa: BLE001
+                config.log("Erro na bandeja do sistema: %r" % e)
+                warn_dialog("Não consegui iniciar a bandeja do sistema: %s" % e)
+
+        threading.Thread(target=run_tray, daemon=True).start()
 
     try:
         _run_ui(root)
