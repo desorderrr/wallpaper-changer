@@ -197,4 +197,11 @@ def self_command() -> list[str]:
     """Comando para relançar a app (usado no arranque automático)."""
     if getattr(sys, "frozen", False):
         return [sys.executable]
-    return [sys.executable, "-m", "wallpaper_changer"]
+    exe = sys.executable
+    if os.name == "nt":
+        # pythonw.exe corre sem janela de consola; evita o terminal
+        # preto que ficava aberto no arranque com o Windows.
+        pythonw = Path(exe).with_name("pythonw.exe")
+        if pythonw.is_file():
+            exe = str(pythonw)
+    return [exe, "-m", "wallpaper_changer"]
