@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Interface comum da camada de sistema operativo."""
+
 from __future__ import annotations
 
 import subprocess

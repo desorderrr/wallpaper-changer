@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Configurações, caminhos e utilidades comuns."""
+
 from __future__ import annotations
 
 import json
@@ -9,16 +10,22 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
+from . import __version__
+
 APP_NAME = "WallpaperChanger"
-APP_VERSION = "2.2.1"
+APP_VERSION = __version__
+
+# O log é rodado quando passa deste tamanho (evita ficheiros gigantes
+# numa app que pode correr durante meses).
+MAX_LOG_BYTES = 1_000_000
 
 DEFAULTS = {
-    "interval": "daily",           # startup_only | 5m | 10m | 15m | 30m | 1h | 2h | 3h | 6h | 12h | daily
-    "theme_mode": "auto",          # auto (segue o sistema) | dark | light
+    "interval": "daily",  # startup_only | 5m | 10m | 15m | 30m | 1h | 2h | 3h | 6h | 12h | daily
+    "theme_mode": "auto",  # auto (segue o sistema) | dark | light
     "use_unsplash": True,
     "use_bing": True,
     "use_wallhaven": False,
-    "paused": False,               # pausa as mudanças automáticas
+    "paused": False,  # pausa as mudanças automáticas
     "change_on_start": True,
     "unsplash_key": "",
     "keep": 20,
@@ -107,7 +114,7 @@ def load_settings() -> None:
     stored = {}
     migrated = False
     try:
-        with open(settings_file(), "r", encoding="utf-8") as f:
+        with open(settings_file(), encoding="utf-8") as f:
             data = json.load(f)
             if isinstance(data, dict):
                 stored = data
@@ -166,9 +173,10 @@ def get(key):
 
 def _validated(key, value):
     """Normaliza valores problemáticos antes de gravar."""
-    if key in ("queries_dark", "queries_light"):
-        if not isinstance(value, list) or not value:
-            return list(DEFAULTS[key])
+    if key in ("queries_dark", "queries_light") and (
+        not isinstance(value, list) or not value
+    ):
+        return list(DEFAULTS[key])
     return value
 
 
@@ -187,7 +195,13 @@ def set_many(values: dict) -> None:
 def log(msg: str) -> None:
     try:
         ensure_dirs()
-        with open(log_file(), "a", encoding="utf-8") as f:
+        path = log_file()
+        if path.exists() and path.stat().st_size > MAX_LOG_BYTES:
+            try:
+                path.replace(path.with_suffix(".txt.1"))
+            except OSError:
+                pass
+        with open(path, "a", encoding="utf-8") as f:
             f.write("%s  %s\n" % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), msg))
     except OSError:
         pass

@@ -30,7 +30,6 @@ def test_settings_window_builds_and_saves(data_dir):
 
     def on_save(values):
         saved.update(values)
-        return None
 
     try:
         from wallpaper_changer.ui import SettingsWindow
@@ -44,7 +43,7 @@ def test_settings_window_builds_and_saves(data_dir):
             open_folder=lambda: None,
             preview_candidate=lambda: (True, "ok", None),
             apply_image=lambda p: (True, "ok"),
-            list_recent=lambda: [],
+            list_recent=list,
             forget_history=lambda: None,
         )
         root.update_idletasks()
@@ -68,5 +67,5 @@ def test_settings_window_builds_and_saves(data_dir):
     finally:
         try:
             root.destroy()
-        except Exception:
+        except Exception:  # noqa: BLE001 - limpeza best-effort no teste
             pass

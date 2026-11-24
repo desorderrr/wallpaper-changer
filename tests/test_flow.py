@@ -15,13 +15,19 @@ def img(color):
 @pytest.fixture(autouse=True)
 def clean_state():
     app.state.update(
-        last_change=None, last_tone=None, last_source=None,
-        last_path=None, last_error=None,
+        last_change=None,
+        last_tone=None,
+        last_source=None,
+        last_path=None,
+        last_error=None,
     )
     yield
     app.state.update(
-        last_change=None, last_tone=None, last_source=None,
-        last_path=None, last_error=None,
+        last_change=None,
+        last_tone=None,
+        last_source=None,
+        last_path=None,
+        last_error=None,
     )
 
 
@@ -33,13 +39,14 @@ def bing_only(data_dir, monkeypatch):
     config.set_key("use_wallhaven", False)
     config.set_key("paused", False)
     applied = []
-    monkeypatch.setattr(app.platform, "set_wallpaper", lambda p: applied.append(p))
+    monkeypatch.setattr(app.platform, "set_wallpaper", applied.append)
     return applied
 
 
 def test_dark_flow_end_to_end(bing_only, monkeypatch):
     monkeypatch.setattr(
-        app.sources, "fetch_bing", lambda want_dark=True: img((8, 8, 8)))
+        app.sources, "fetch_bing", lambda want_dark=True: img((8, 8, 8))
+    )
     ok, msg = app.change_wallpaper()
 
     assert ok
@@ -53,7 +60,8 @@ def test_dark_flow_end_to_end(bing_only, monkeypatch):
 def test_light_flow_end_to_end(bing_only, monkeypatch):
     config.set_key("theme_mode", "light")
     monkeypatch.setattr(
-        app.sources, "fetch_bing", lambda want_dark=True: img((248, 248, 248)))
+        app.sources, "fetch_bing", lambda want_dark=True: img((248, 248, 248))
+    )
     ok, msg = app.change_wallpaper()
     assert ok and "claro" in msg
     assert bing_only
@@ -61,7 +69,8 @@ def test_light_flow_end_to_end(bing_only, monkeypatch):
 
 def test_tone_mismatch_fails_gracefully(bing_only, monkeypatch):
     monkeypatch.setattr(
-        app.sources, "fetch_bing", lambda want_dark=True: img((250, 250, 250)))
+        app.sources, "fetch_bing", lambda want_dark=True: img((250, 250, 250))
+    )
     ok, msg = app.change_wallpaper()
     assert not ok
     assert "Não consegui" in msg
@@ -83,9 +92,10 @@ def test_only_wallhaven_selected(data_dir, monkeypatch):
     config.set_key("use_bing", False)
     config.set_key("use_wallhaven", True)
     applied = []
-    monkeypatch.setattr(app.platform, "set_wallpaper", lambda p: applied.append(p))
+    monkeypatch.setattr(app.platform, "set_wallpaper", applied.append)
     monkeypatch.setattr(
-        app.sources, "fetch_wallhaven", lambda want_dark=True: img((9, 9, 9)))
+        app.sources, "fetch_wallhaven", lambda want_dark=True: img((9, 9, 9))
+    )
     ok, msg = app.change_wallpaper()
     assert ok and "Wallhaven" in msg
     assert applied
@@ -94,7 +104,8 @@ def test_only_wallhaven_selected(data_dir, monkeypatch):
 def test_paused_blocks_automatic_but_not_manual(bing_only, monkeypatch):
     config.set_key("paused", True)
     monkeypatch.setattr(
-        app.sources, "fetch_bing", lambda want_dark=True: img((8, 8, 8)))
+        app.sources, "fetch_bing", lambda want_dark=True: img((8, 8, 8))
+    )
 
     ok, msg = app.change_wallpaper()
     assert not ok
@@ -118,7 +129,8 @@ def test_change_lock(data_dir):
 
 def test_repeated_wallpaper_is_blocked(bing_only, monkeypatch):
     monkeypatch.setattr(
-        app.sources, "fetch_bing", lambda want_dark=True: img((8, 8, 8)))
+        app.sources, "fetch_bing", lambda want_dark=True: img((8, 8, 8))
+    )
     ok1, _ = app.change_wallpaper()
     assert ok1
 
@@ -129,26 +141,55 @@ def test_repeated_wallpaper_is_blocked(bing_only, monkeypatch):
 
 def test_obtain_candidate_and_apply(bing_only, monkeypatch):
     monkeypatch.setattr(
-        app.sources, "fetch_bing", lambda want_dark=True: img((10, 10, 10)))
+        app.sources, "fetch_bing", lambda want_dark=True: img((10, 10, 10))
+    )
 
-    ok, msg, path = app.obtain_candidate()
+    ok, _msg, path = app.obtain_candidate()
     assert ok
     assert path and path.endswith(".jpg")
     from pathlib import Path
 
     assert Path(path).exists()
 
-    ok2, msg2 = app.apply_file(path)
+    ok2, _msg2 = app.apply_file(path)
     assert ok2
     assert bing_only
     assert app.state["last_path"] == path
+
+
+def test_obtain_candidate_skips_duplicates(bing_only, monkeypatch):
+    data = img((10, 10, 10))
+    monkeypatch.setattr(app.sources, "fetch_bing", lambda want_dark=True: data)
+
+    ok1, _, path1 = app.obtain_candidate()
+    assert ok1 and path1
+
+    # marca a imagem como já usada e pede nova sugestão
+    app.history.add(data, "bing")
+    ok2, msg2, path2 = app.obtain_candidate()
+    assert not ok2 and path2 is None
+    assert "usado" in msg2
+
+
+def test_failed_apply_removes_orphan_file(bing_only, monkeypatch):
+    monkeypatch.setattr(
+        app.sources, "fetch_bing", lambda want_dark=True: img((8, 8, 8))
+    )
+
+    def fail(_path):
+        raise OSError("falhou ao aplicar")
+
+    monkeypatch.setattr(app.platform, "set_wallpaper", fail)
+    ok, _msg = app.change_wallpaper()
+    assert not ok
+    assert len(list(config.image_dir().glob("*.jpg"))) == 0
 
 
 def test_obtain_candidate_no_sources(data_dir):
     config.set_key("use_unsplash", False)
     config.set_key("use_bing", False)
     config.set_key("use_wallhaven", False)
-    ok, msg, path = app.obtain_candidate()
+    ok, _msg, path = app.obtain_candidate()
     assert not ok and path is None
 
 

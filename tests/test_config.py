@@ -51,9 +51,7 @@ def test_interval_label_migration(data_dir):
 
 
 def test_keep_validation(data_dir):
-    config.settings_file().write_text(
-        json.dumps({"keep": 9999}), encoding="utf-8"
-    )
+    config.settings_file().write_text(json.dumps({"keep": 9999}), encoding="utf-8")
     config.load_settings()
     assert config.get("keep") == 200
 
@@ -84,3 +82,21 @@ def test_empty_queries_fall_back_to_defaults(data_dir):
     config.load_settings()
     assert config.get("queries_dark") == config.DEFAULTS["queries_dark"]
     assert config.get("queries_light") == config.DEFAULTS["queries_light"]
+
+
+def test_log_rotation(data_dir, monkeypatch):
+    monkeypatch.setattr(config, "MAX_LOG_BYTES", 100)
+    config.log("x" * 120)  # primeira escrita passa do limite
+    assert config.log_file().stat().st_size > 100
+    config.log("linha nova")  # a rotação acontece antes desta escrita
+    backup = config.log_file().with_suffix(".txt.1")
+    assert backup.exists()
+    assert "x" * 120 in backup.read_text(encoding="utf-8")
+    assert "linha nova" in config.log_file().read_text(encoding="utf-8")
+    assert config.log_file().stat().st_size < 100
+
+
+def test_version_vem_do_pacote():
+    import wallpaper_changer
+
+    assert wallpaper_changer.__version__ == config.APP_VERSION

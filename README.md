@@ -140,3 +140,5 @@ git tag v2.0.0 && git push origin v2.0.0
 ## Licença
 
 [MIT](LICENSE) © Des
+
+Histórico de versões no [CHANGELOG](CHANGELOG.md).

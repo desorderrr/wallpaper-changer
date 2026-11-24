@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """WallpaperChanger — ícone na bandeja, agendador e janela de definições."""
+
 from __future__ import annotations
 
 import ctypes
@@ -51,6 +52,7 @@ def _get_pystray():
     _pystray = mod
     return mod
 
+
 # ---------------------------------------------------------------------------
 # Estado de execução (mostrado na UI)
 # ---------------------------------------------------------------------------
@@ -62,9 +64,10 @@ state: dict = {
     "last_error": None,
 }
 
+_state_lock = threading.RLock()  # estado lido na UI, escrito nos workers
 _change_lock = threading.Lock()
-_wake = threading.Event()          # sinaliza mudança de settings -> reagenda
-_ui_queue: "queue.Queue[str] | None" = None
+_wake = threading.Event()  # sinaliza mudança de settings -> reagenda
+_ui_queue: queue.Queue[str] | None = None
 _tray_icon = None
 _settings_win = None
 _instance_socket = None
@@ -83,6 +86,8 @@ def effective_theme_is_dark() -> bool:
 
 
 def status_text() -> str:
+    with _state_lock:
+        snapshot = dict(state)
     tone_name = "escuro" if effective_theme_is_dark() else "claro"
     mode = {
         "auto": "segue o sistema",
@@ -92,15 +97,17 @@ def status_text() -> str:
     parts = ["Tema atual: %s (%s)" % (tone_name, mode)]
     if get("paused"):
         parts.append("mudanças automáticas em pausa")
-    if state["last_source"]:
+    if snapshot["last_source"]:
         src = {
             "unsplash": "Unsplash",
             "bing": "Bing",
             "wallhaven": "Wallhaven",
-        }.get(state["last_source"], state["last_source"])
+        }.get(snapshot["last_source"], snapshot["last_source"])
         parts.append("última fonte: %s" % src)
-    if state["last_change"]:
-        parts.append("última troca: %s" % state["last_change"].strftime("%d/%m %H:%M"))
+    if snapshot["last_change"]:
+        parts.append(
+            "última troca: %s" % snapshot["last_change"].strftime("%d/%m %H:%M")
+        )
     return " · ".join(parts)
 
 
@@ -116,9 +123,7 @@ def save_image(img_bytes: bytes, prefix: str):
 def cleanup_images() -> None:
     keep = int(get("keep") or 20)
     try:
-        files = sorted(
-            ((p.stat().st_mtime, p) for p in config.image_dir().glob("*.jpg"))
-        )
+        files = sorted((p.stat().st_mtime, p) for p in config.image_dir().glob("*.jpg"))
         for _, old in files[: max(0, len(files) - keep)]:
             try:
                 old.unlink()
@@ -128,7 +133,7 @@ def cleanup_images() -> None:
         pass
 
 
-def _enabled_sources(want_dark: bool) -> list[tuple[str, str, object]]:
+def _enabled_sources() -> list[tuple[str, str, object]]:
     """(id, nome, função de fetch) das fontes ativas, por ordem aleatória."""
     entries: list[tuple[str, str, object]] = []
     if get("use_unsplash"):
@@ -158,7 +163,7 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
     want_dark = effective_theme_is_dark()
     tone_name = "escuro" if want_dark else "claro"
 
-    enabled = _enabled_sources(want_dark)
+    enabled = _enabled_sources()
     if not enabled:
         return False, "Nenhuma fonte ativa. Ativa o Unsplash, o Bing ou o Wallhaven."
 
@@ -178,16 +183,25 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
                 continue
 
             path = save_image(data, src)
-            platform.set_wallpaper(path)
+            try:
+                platform.set_wallpaper(path)
+            except Exception:
+                # não deixar ficheiros órfãos quando a aplicação falha
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise
             cleanup_images()
             history.add(data, src, path)
-            state.update(
-                last_change=datetime.now(),
-                last_tone=tone_name,
-                last_source=src,
-                last_path=str(path),
-                last_error=None,
-            )
+            with _state_lock:
+                state.update(
+                    last_change=datetime.now(),
+                    last_tone=tone_name,
+                    last_source=src,
+                    last_path=str(path),
+                    last_error=None,
+                )
             config.log("Wallpaper %s aplicado: %s" % (tone_name, path))
             return True, "Wallpaper %s aplicado (%s)." % (tone_name, name)
         except Exception as e:  # noqa: BLE001 - qualquer fonte pode falhar
@@ -195,7 +209,8 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
             config.log("Erro em %s: %r" % (name, e))
 
     msg = "Não consegui obter uma imagem %s agora. %s" % (tone_name, last_error)
-    state["last_error"] = msg
+    with _state_lock:
+        state["last_error"] = msg
     config.log(msg)
     return False, msg
 
@@ -203,8 +218,7 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
 def _source_key(path) -> str:
     """Extrai a fonte do nome do ficheiro (ex.: preview_unsplash_2026...)."""
     stem = path.stem
-    if stem.startswith("preview_"):
-        stem = stem[len("preview_"):]
+    stem = stem.removeprefix("preview_")
     return stem.split("_", 1)[0]
 
 
@@ -212,9 +226,13 @@ def obtain_candidate() -> tuple[bool, str, str | None]:
     """Obtém uma imagem (sem aplicar) para a pré-visualização."""
     want_dark = effective_theme_is_dark()
     tone_name = "escuro" if want_dark else "claro"
-    enabled = _enabled_sources(want_dark)
+    enabled = _enabled_sources()
     if not enabled:
-        return False, "Nenhuma fonte ativa. Ativa o Unsplash, o Bing ou o Wallhaven.", None
+        return (
+            False,
+            "Nenhuma fonte ativa. Ativa o Unsplash, o Bing ou o Wallhaven.",
+            None,
+        )
 
     errors: list[str] = []
     for src, name, fetch in enabled:
@@ -222,6 +240,10 @@ def obtain_candidate() -> tuple[bool, str, str | None]:
             data = fetch(want_dark)
             if not tone.tone_matches(tone.mean_luminance(data), want_dark):
                 errors.append("%s: tom errado" % name)
+                continue
+            if history.is_duplicate(data):
+                errors.append("%s: wallpaper já usado" % name)
+                config.log("Sugestão repetida de %s ignorada" % name)
                 continue
             path = save_image(data, "preview_" + src)
             return True, "Sugestão do %s (tom %s)." % (name, tone_name), str(path)
@@ -241,13 +263,14 @@ def apply_file(path) -> tuple[bool, str]:
         cleanup_images()
         history.add_path(path, _source_key(path))
         tone_name = "escuro" if effective_theme_is_dark() else "claro"
-        state.update(
-            last_change=datetime.now(),
-            last_tone=tone_name,
-            last_source=_source_key(path),
-            last_path=str(path),
-            last_error=None,
-        )
+        with _state_lock:
+            state.update(
+                last_change=datetime.now(),
+                last_tone=tone_name,
+                last_source=_source_key(path),
+                last_path=str(path),
+                last_error=None,
+            )
         config.log("Wallpaper aplicado manualmente: %s" % path)
         return True, "Wallpaper aplicado."
     except Exception as e:  # noqa: BLE001
@@ -332,27 +355,30 @@ def theme_watcher_loop() -> None:
 def _notify(icon, msg: str) -> None:
     try:
         (icon or _tray_icon).notify(msg, APP_NAME)
-    except Exception:
+    except Exception:  # noqa: BLE001 - notificações são best-effort
         config.log("(notificação indisponível) %s" % msg)
 
 
 def _apply_settings(values: dict) -> str | None:
-    config.set_many({
-        "use_unsplash": values["use_unsplash"],
-        "use_bing": values["use_bing"],
-        "use_wallhaven": values.get("use_wallhaven", False),
-        "paused": values.get("paused", False),
-        "unsplash_key": values["unsplash_key"],
-        "theme_mode": values["theme_mode"],
-        "interval": values["interval"],
-        "change_on_start": values["change_on_start"],
-        "keep": values["keep"],
-        "queries_dark": values["queries_dark"],
-        "queries_light": values["queries_light"],
-    })
-    if values["startup"] != platform.startup_enabled():
-        if not platform.set_startup(values["startup"]):
-            return "Não consegui alterar o arranque automático do sistema."
+    config.set_many(
+        {
+            "use_unsplash": values["use_unsplash"],
+            "use_bing": values["use_bing"],
+            "use_wallhaven": values.get("use_wallhaven", False),
+            "paused": values.get("paused", False),
+            "unsplash_key": values["unsplash_key"],
+            "theme_mode": values["theme_mode"],
+            "interval": values["interval"],
+            "change_on_start": values["change_on_start"],
+            "keep": values["keep"],
+            "queries_dark": values["queries_dark"],
+            "queries_light": values["queries_light"],
+        }
+    )
+    if values["startup"] != platform.startup_enabled() and not platform.set_startup(
+        values["startup"]
+    ):
+        return "Não consegui alterar o arranque automático do sistema."
     _wake.set()
     return None
 
@@ -370,7 +396,7 @@ def build_menu():
 
     def change_now(icon, item=None):
         def work():
-            ok, msg = change_wallpaper(manual=True)
+            _ok, msg = change_wallpaper(manual=True)
             _notify(icon, msg)
 
         threading.Thread(target=work, daemon=True).start()
@@ -412,8 +438,7 @@ def build_menu():
         _wake.set()
         _notify(
             icon,
-            "Mudanças automáticas: %s"
-            % ("EM PAUSA" if get("paused") else "ATIVAS"),
+            "Mudanças automáticas: %s" % ("EM PAUSA" if get("paused") else "ATIVAS"),
         )
 
     def toggle_source(key):
@@ -425,34 +450,45 @@ def build_menu():
     return pystray.Menu(
         pystray.MenuItem("Mudar agora", change_now, default=True),
         pystray.MenuItem(
-            "Pausar mudanças automáticas", toggle_pause,
+            "Pausar mudanças automáticas",
+            toggle_pause,
             checked=lambda item: bool(get("paused")),
         ),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem(
             "Intervalo",
-            pystray.Menu(*[
-                pystray.MenuItem(
-                    label, interval_action(value), radio=True,
-                    checked=lambda item, v=value: get("interval") == v,
-                )
-                for value, label in config.INTERVAL_LABELS
-            ]),
+            pystray.Menu(
+                *[
+                    pystray.MenuItem(
+                        label,
+                        interval_action(value),
+                        radio=True,
+                        checked=lambda item, v=value: get("interval") == v,
+                    )
+                    for value, label in config.INTERVAL_LABELS
+                ]
+            ),
         ),
         pystray.MenuItem(
             "Tema dos wallpapers",
             pystray.Menu(
                 pystray.MenuItem(
-                    "Seguir o tema do sistema", theme_action("auto"),
-                    radio=True, checked=lambda item: get("theme_mode") == "auto",
+                    "Seguir o tema do sistema",
+                    theme_action("auto"),
+                    radio=True,
+                    checked=lambda item: get("theme_mode") == "auto",
                 ),
                 pystray.MenuItem(
-                    "Sempre escuro", theme_action("dark"),
-                    radio=True, checked=lambda item: get("theme_mode") == "dark",
+                    "Sempre escuro",
+                    theme_action("dark"),
+                    radio=True,
+                    checked=lambda item: get("theme_mode") == "dark",
                 ),
                 pystray.MenuItem(
-                    "Sempre claro", theme_action("light"),
-                    radio=True, checked=lambda item: get("theme_mode") == "light",
+                    "Sempre claro",
+                    theme_action("light"),
+                    radio=True,
+                    checked=lambda item: get("theme_mode") == "light",
                 ),
             ),
         ),
@@ -460,26 +496,31 @@ def build_menu():
             "Fontes",
             pystray.Menu(
                 pystray.MenuItem(
-                    "Unsplash", toggle_source("use_unsplash"),
+                    "Unsplash",
+                    toggle_source("use_unsplash"),
                     checked=lambda item: bool(get("use_unsplash")),
                 ),
                 pystray.MenuItem(
-                    "Bing Photo of the Day", toggle_source("use_bing"),
+                    "Bing Photo of the Day",
+                    toggle_source("use_bing"),
                     checked=lambda item: bool(get("use_bing")),
                 ),
                 pystray.MenuItem(
-                    "Wallhaven (sem key)", toggle_source("use_wallhaven"),
+                    "Wallhaven (sem key)",
+                    toggle_source("use_wallhaven"),
                     checked=lambda item: bool(get("use_wallhaven")),
                 ),
             ),
         ),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem(
-            "Iniciar com o sistema", toggle_startup,
+            "Iniciar com o sistema",
+            toggle_startup,
             checked=lambda item: platform.startup_enabled(),
         ),
         pystray.MenuItem(
-            "Mudar wallpaper ao arrancar o programa", toggle_change_on_start,
+            "Mudar wallpaper ao arrancar o programa",
+            toggle_change_on_start,
             checked=lambda item: bool(get("change_on_start")),
         ),
         pystray.Menu.SEPARATOR,
@@ -531,7 +572,7 @@ def _open_settings(root) -> None:
                 _settings_win.lift()
                 _settings_win.focus_force()
                 return
-        except Exception:
+        except Exception:  # noqa: BLE001 - janela fechada entretanto
             pass
         _settings_win = None
 
@@ -555,7 +596,7 @@ def _open_settings(root) -> None:
             forget_history=forget_history,
         )
         _settings_win.set_header_provider(status_text)
-    except Exception:
+    except Exception:  # noqa: BLE001 - regista o traceback e continua
         config.log("Erro ao abrir definições:\n%s" % traceback.format_exc())
         _settings_win = None
 
@@ -570,7 +611,7 @@ def _make_root():
     root.withdraw()
     try:
         root.iconphoto(True, make_icon_image())
-    except Exception:
+    except Exception:  # noqa: BLE001 - ícone é cosmético
         pass
     return root
 
@@ -621,14 +662,16 @@ def warn_dialog(msg: str) -> None:
         if sys.platform == "win32":
             ctypes.windll.user32.MessageBoxW(None, msg, APP_NAME, 0x40)
         elif sys.platform == "darwin":
+            # escapa primeiro as barras para não criar sequências de escape
+            safe = msg.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
             script = 'display dialog "%s" buttons {"OK"} with title "%s"' % (
-                msg.replace('"', '\\"').replace("\n", "\\n"),
+                safe,
                 APP_NAME,
             )
             subprocess.run(["osascript", "-e", script], timeout=10)
         else:
             subprocess.run(["notify-send", APP_NAME, msg], timeout=10)
-    except Exception:
+    except Exception:  # noqa: BLE001 - aviso é best-effort
         pass
 
 
@@ -685,8 +728,11 @@ def main() -> None:
             pass
 
     icon = pystray.Icon(
-        APP_NAME, icon=make_icon_image(), title=APP_NAME,
-        menu=build_menu(), **icon_kwargs,
+        APP_NAME,
+        icon=make_icon_image(),
+        title=APP_NAME,
+        menu=build_menu(),
+        **icon_kwargs,
     )
     if sys.platform == "darwin":  # pragma: no cover
         icon.run_detached(setup=on_ready)

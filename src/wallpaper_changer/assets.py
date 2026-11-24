@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Ícone da aplicação (gerado em código, sem ficheiros externos)."""
+
 from __future__ import annotations
 
 from PIL import Image, ImageDraw

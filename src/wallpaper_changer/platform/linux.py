@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Backend Linux: tema, wallpaper por ambiente de trabalho e autostart XDG."""
+
 from __future__ import annotations
 
 import os
@@ -83,9 +84,7 @@ class Platform(BasePlatform):
             pass
 
         env = os.environ.get("GTK_THEME", "")
-        if ":dark" in env.lower():
-            return False
-        return True
+        return ":dark" not in env.lower()
 
     # -- wallpaper ----------------------------------------------------
     def set_wallpaper(self, path: Path) -> None:
@@ -103,50 +102,70 @@ class Platform(BasePlatform):
         def set_gnome() -> bool:
             if not attempt(
                 "gnome",
-                ["gsettings", "set", "org.gnome.desktop.background",
-                 "picture-uri", uri],
+                [
+                    "gsettings",
+                    "set",
+                    "org.gnome.desktop.background",
+                    "picture-uri",
+                    uri,
+                ],
             ):
                 return False
             # melhor esforço para o modo escuro (chave pode não existir)
-            run(["gsettings", "set", "org.gnome.desktop.background",
-                 "picture-uri-dark", uri])
+            run(
+                [
+                    "gsettings",
+                    "set",
+                    "org.gnome.desktop.background",
+                    "picture-uri-dark",
+                    uri,
+                ]
+            )
             return True
 
         def set_cinnamon() -> bool:
             return attempt(
                 "cinnamon",
-                ["gsettings", "set", "org.cinnamon.desktop.background",
-                 "picture-uri", uri],
+                [
+                    "gsettings",
+                    "set",
+                    "org.cinnamon.desktop.background",
+                    "picture-uri",
+                    uri,
+                ],
             )
 
         def set_mate() -> bool:
             return attempt(
                 "mate",
-                ["gsettings", "set", "org.mate.background",
-                 "picture-filename", p],
+                ["gsettings", "set", "org.mate.background", "picture-filename", p],
             )
 
         def set_kde() -> bool:
             script = (
-                'var ds = desktops();'
-                'for (var i = 0; i < ds.length; i++) {'
+                "var ds = desktops();"
+                "for (var i = 0; i < ds.length; i++) {"
                 'ds[i].wallpaperPlugin = "org.kde.image";'
                 'ds[i].currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];'
                 'ds[i].writeConfig("Image", "%s");}' % uri
             )
             for tool in ("qdbus6", "qdbus"):
-                if shutil.which(tool):
-                    if attempt(
+                if shutil.which(tool) and attempt(
+                    tool,
+                    [
                         tool,
-                        [tool, "org.kde.plasmashell", "/PlasmaShell",
-                         "org.kde.PlasmaShell.evaluateScript", script],
-                    ):
-                        return True
+                        "org.kde.plasmashell",
+                        "/PlasmaShell",
+                        "org.kde.PlasmaShell.evaluateScript",
+                        script,
+                    ],
+                ):
+                    return True
             return False
 
         def set_xfce() -> bool:
-            ok, out = run(["xfconf-query", "-c", "xfce4-desktop", "-l"])
-            props = [l for l in out.splitlines() if l.endswith("/last-image")]
+            _ok, out = run(["xfconf-query", "-c", "xfce4-desktop", "-l"])
+            props = [line for line in out.splitlines() if line.endswith("/last-image")]
             done = False
             for prop in props:
                 if attempt(
@@ -212,12 +231,11 @@ class Platform(BasePlatform):
                 )
                 target.write_text(content, encoding="utf-8")
                 return True
-            else:
-                try:
-                    target.unlink()
-                except FileNotFoundError:
-                    pass
-                return True
+            try:
+                target.unlink()
+            except FileNotFoundError:
+                pass
+            return True
         except OSError:
             return False
 

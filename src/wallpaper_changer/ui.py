@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """Janela de definições moderna (customtkinter), com pré-visualização."""
+
 from __future__ import annotations
 
 import queue
 import threading
 import tkinter as tk
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
 
 import customtkinter as ctk
 from PIL import Image
@@ -32,8 +33,7 @@ SOURCE_NAMES = {
 
 def _source_from_path(path: Path) -> str:
     stem = path.stem
-    if stem.startswith("preview_"):
-        stem = stem[len("preview_"):]
+    stem = stem.removeprefix("preview_")
     key = stem.split("_", 1)[0]
     return SOURCE_NAMES.get(key, key.title())
 
@@ -69,6 +69,8 @@ class SettingsWindow(ctk.CTkToplevel):
         self._tiles: dict[str, tuple[ctk.CTkImage, ctk.CTkButton]] = {}
         self._preview_photo: ctk.CTkImage | None = None
         self._gallery_thumbs: list[ctk.CTkImage] = []
+        self._gallery_loading = False
+        self._gallery_select: str | None = None
 
         self.title("WallpaperChanger — Definições")
         self.resizable(False, False)
@@ -89,12 +91,17 @@ class SettingsWindow(ctk.CTkToplevel):
         titles = ctk.CTkFrame(header, fg_color="transparent")
         titles.pack(side="left", padx=12, fill="x", expand=True)
         ctk.CTkLabel(
-            titles, text="WallpaperChanger",
+            titles,
+            text="WallpaperChanger",
             font=ctk.CTkFont(size=20, weight="bold"),
         ).pack(anchor="w")
         self.header_status = ctk.CTkLabel(
-            titles, text=status_text(), text_color=("gray40", "gray60"),
-            font=ctk.CTkFont(size=12), anchor="w", justify="left",
+            titles,
+            text=status_text(),
+            text_color=("gray40", "gray60"),
+            font=ctk.CTkFont(size=12),
+            anchor="w",
+            justify="left",
         )
         self.header_status.pack(anchor="w", fill="x")
 
@@ -114,8 +121,12 @@ class SettingsWindow(ctk.CTkToplevel):
         footer.grid(row=2, column=0, sticky="ew", padx=20, pady=(4, 16))
 
         self.status_label = ctk.CTkLabel(
-            footer, text="Pronto.", text_color=("gray40", "gray60"),
-            anchor="w", justify="left", wraplength=350,
+            footer,
+            text="Pronto.",
+            text_color=("gray40", "gray60"),
+            anchor="w",
+            justify="left",
+            wraplength=350,
         )
         self.status_label.pack(side="left", fill="x", expand=True)
 
@@ -124,12 +135,19 @@ class SettingsWindow(ctk.CTkToplevel):
         )
         self.save_btn.pack(side="right")
         ctk.CTkButton(
-            footer, text="Cancelar", width=90, fg_color=("gray70", "gray30"),
-            hover_color=("gray60", "gray40"), command=self._close,
+            footer,
+            text="Cancelar",
+            width=90,
+            fg_color=("gray70", "gray30"),
+            hover_color=("gray60", "gray40"),
+            command=self._close,
         ).pack(side="right", padx=8)
         self.change_btn = ctk.CTkButton(
-            footer, text="Mudar agora", width=110,
-            fg_color=("gray75", "gray25"), hover_color=("gray65", "gray35"),
+            footer,
+            text="Mudar agora",
+            width=110,
+            fg_color=("gray75", "gray25"),
+            hover_color=("gray65", "gray35"),
             command=self._change_now,
         )
         self.change_btn.pack(side="right")
@@ -149,7 +167,8 @@ class SettingsWindow(ctk.CTkToplevel):
         box.grid(row=0, column=0, sticky="ew", pady=(8, 6), padx=4)
         box.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
-            box, text="Fontes de imagens",
+            box,
+            text="Fontes de imagens",
             font=ctk.CTkFont(size=14, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 2))
 
@@ -160,42 +179,50 @@ class SettingsWindow(ctk.CTkToplevel):
         row = ctk.CTkFrame(box, fg_color="transparent")
         row.grid(row=1, column=0, sticky="w", padx=8, pady=2)
         ctk.CTkCheckBox(row, text="Unsplash", variable=self.var_unsplash).pack(
-            side="left", padx=4)
-        ctk.CTkCheckBox(
-            row, text="Bing (foto do dia)", variable=self.var_bing
-        ).pack(side="left", padx=4)
-        ctk.CTkCheckBox(
-            row, text="Wallhaven", variable=self.var_wallhaven
-        ).pack(side="left", padx=4)
+            side="left", padx=4
+        )
+        ctk.CTkCheckBox(row, text="Bing (foto do dia)", variable=self.var_bing).pack(
+            side="left", padx=4
+        )
+        ctk.CTkCheckBox(row, text="Wallhaven", variable=self.var_wallhaven).pack(
+            side="left", padx=4
+        )
 
         ctk.CTkLabel(
             box,
             text="Podes escolher só uma fonte ou combinar várias.",
-            text_color=("gray45", "gray55"), font=ctk.CTkFont(size=11),
+            text_color=("gray45", "gray55"),
+            font=ctk.CTkFont(size=11),
         ).grid(row=2, column=0, sticky="w", padx=12, pady=(0, 4))
 
         self.var_key = tk.StringVar(value=get("unsplash_key") or "")
         key_entry = ctk.CTkEntry(
-            box, textvariable=self.var_key, width=650,
+            box,
+            textvariable=self.var_key,
+            width=650,
             placeholder_text="Cola aqui a API key do Unsplash…",
         )
         key_entry.grid(row=3, column=0, sticky="ew", padx=12, pady=(4, 0))
         ctk.CTkLabel(
             box,
             text="API key gratuita em unsplash.com/developers — só para o Unsplash. "
-                 "O Wallhaven e o Bing não precisam.",
-            text_color=("gray45", "gray55"), font=ctk.CTkFont(size=11),
+            "O Wallhaven e o Bing não precisam.",
+            text_color=("gray45", "gray55"),
+            font=ctk.CTkFont(size=11),
         ).grid(row=4, column=0, sticky="w", padx=12, pady=(2, 10))
 
         # Tom
         box2 = ctk.CTkFrame(tab)
         box2.grid(row=1, column=0, sticky="ew", pady=6, padx=4)
         ctk.CTkLabel(
-            box2, text="Tom dos wallpapers",
+            box2,
+            text="Tom dos wallpapers",
             font=ctk.CTkFont(size=14, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
         self.theme_seg = ctk.CTkSegmentedButton(
-            box2, values=list(THEME_LABELS), width=620,
+            box2,
+            values=list(THEME_LABELS),
+            width=620,
         )
         self.theme_seg.set(
             THEME_TO_LABEL.get(get("theme_mode"), "Seguir o tema do sistema")
@@ -207,7 +234,8 @@ class SettingsWindow(ctk.CTkToplevel):
         box3.grid(row=2, column=0, sticky="ew", pady=6, padx=4)
         box3.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
-            box3, text="Intervalo de mudança",
+            box3,
+            text="Intervalo de mudança",
             font=ctk.CTkFont(size=14, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
 
@@ -217,7 +245,9 @@ class SettingsWindow(ctk.CTkToplevel):
             value=self._value_to_label.get(get("interval"), "Diário")
         )
         ctk.CTkOptionMenu(
-            box3, values=list(self._label_to_value), variable=self.var_interval,
+            box3,
+            values=list(self._label_to_value),
+            variable=self.var_interval,
             width=240,
         ).grid(row=1, column=0, sticky="w", padx=12, pady=(0, 10))
 
@@ -225,14 +255,18 @@ class SettingsWindow(ctk.CTkToplevel):
         self.var_onstart = tk.BooleanVar(value=bool(get("change_on_start")))
         self.var_paused = tk.BooleanVar(value=bool(get("paused")))
         ctk.CTkCheckBox(
-            box3, text="Iniciar com o sistema", variable=self.var_startup,
+            box3,
+            text="Iniciar com o sistema",
+            variable=self.var_startup,
         ).grid(row=2, column=0, sticky="w", padx=12, pady=2)
         ctk.CTkCheckBox(
-            box3, text="Mudar wallpaper quando o programa arranca",
+            box3,
+            text="Mudar wallpaper quando o programa arranca",
             variable=self.var_onstart,
         ).grid(row=3, column=0, sticky="w", padx=12, pady=2)
         ctk.CTkCheckBox(
-            box3, text="Pausar mudanças automáticas (o \"Mudar agora\" continua a funcionar)",
+            box3,
+            text='Pausar mudanças automáticas (o "Mudar agora" continua a funcionar)',
             variable=self.var_paused,
         ).grid(row=4, column=0, sticky="w", padx=12, pady=2)
 
@@ -241,7 +275,8 @@ class SettingsWindow(ctk.CTkToplevel):
         ctk.CTkLabel(keep_row, text="Guardar as últimas").pack(side="left")
         self.var_keep = tk.StringVar(value=str(get("keep") or 20))
         ctk.CTkEntry(keep_row, textvariable=self.var_keep, width=60).pack(
-            side="left", padx=6)
+            side="left", padx=6
+        )
         ctk.CTkLabel(keep_row, text="imagens").pack(side="left")
 
     def _build_preview(self, tab) -> None:
@@ -250,25 +285,37 @@ class SettingsWindow(ctk.CTkToplevel):
         top = ctk.CTkFrame(tab, fg_color="transparent")
         top.grid(row=0, column=0, sticky="ew", padx=6, pady=(8, 2))
         ctk.CTkLabel(
-            top, text="Pré-visualização",
+            top,
+            text="Pré-visualização",
             font=ctk.CTkFont(size=14, weight="bold"),
         ).pack(side="left")
         ctk.CTkButton(
-            top, text="Atualizar", width=90, height=26,
-            fg_color=("gray75", "gray25"), hover_color=("gray65", "gray35"),
+            top,
+            text="Atualizar",
+            width=90,
+            height=26,
+            fg_color=("gray75", "gray25"),
+            hover_color=("gray65", "gray35"),
             command=self._refresh_gallery,
         ).pack(side="right")
 
         self.preview_label = ctk.CTkLabel(
-            tab, text="Ainda sem imagens. Usa \"Nova sugestão\".",
-            width=680, height=250, fg_color=("gray85", "gray18"),
+            tab,
+            text='Ainda sem imagens. Usa "Nova sugestão".',
+            width=680,
+            height=250,
+            fg_color=("gray85", "gray18"),
             corner_radius=10,
         )
         self.preview_label.grid(row=1, column=0, sticky="ew", padx=6, pady=(2, 4))
 
         self.preview_info = ctk.CTkLabel(
-            tab, text="", text_color=("gray40", "gray60"),
-            font=ctk.CTkFont(size=12), anchor="w", justify="left",
+            tab,
+            text="",
+            text_color=("gray40", "gray60"),
+            font=ctk.CTkFont(size=12),
+            anchor="w",
+            justify="left",
         )
         self.preview_info.grid(row=2, column=0, sticky="w", padx=8)
 
@@ -280,19 +327,28 @@ class SettingsWindow(ctk.CTkToplevel):
         actions = ctk.CTkFrame(tab, fg_color="transparent")
         actions.grid(row=4, column=0, sticky="ew", padx=6, pady=(0, 6))
         self.suggest_btn = ctk.CTkButton(
-            actions, text="Nova sugestão", width=130,
-            fg_color=("gray75", "gray25"), hover_color=("gray65", "gray35"),
+            actions,
+            text="Nova sugestão",
+            width=130,
+            fg_color=("gray75", "gray25"),
+            hover_color=("gray65", "gray35"),
             command=self._suggest,
         )
         self.suggest_btn.pack(side="left")
         self.apply_btn = ctk.CTkButton(
-            actions, text="Aplicar no ambiente de trabalho", width=220,
-            command=self._apply_selected, state="disabled",
+            actions,
+            text="Aplicar no ambiente de trabalho",
+            width=220,
+            command=self._apply_selected,
+            state="disabled",
         )
         self.apply_btn.pack(side="left", padx=8)
         self.preview_status = ctk.CTkLabel(
-            actions, text="", text_color=("gray45", "gray55"),
-            font=ctk.CTkFont(size=11), anchor="w",
+            actions,
+            text="",
+            text_color=("gray45", "gray55"),
+            font=ctk.CTkFont(size=11),
+            anchor="w",
         )
         self.preview_status.pack(side="left", padx=6, fill="x", expand=True)
 
@@ -303,36 +359,45 @@ class SettingsWindow(ctk.CTkToplevel):
         tab.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(
-            tab, text="Pesquisas no Unsplash (uma por linha)",
+            tab,
+            text="Pesquisas no Unsplash (uma por linha)",
             font=ctk.CTkFont(size=14, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=8, pady=(10, 2))
         ctk.CTkLabel(
             tab,
             text="Usadas para escolher fotos com o tom certo em cada modo.",
-            text_color=("gray45", "gray55"), font=ctk.CTkFont(size=11),
+            text_color=("gray45", "gray55"),
+            font=ctk.CTkFont(size=11),
         ).grid(row=1, column=0, sticky="w", padx=8, pady=(0, 8))
 
         ctk.CTkLabel(tab, text="Modo escuro:", anchor="w").grid(
-            row=2, column=0, sticky="w", padx=8)
+            row=2, column=0, sticky="w", padx=8
+        )
         self.txt_dark = ctk.CTkTextbox(tab, height=95, width=660)
         self.txt_dark.grid(row=3, column=0, sticky="ew", padx=8, pady=(2, 10))
         self.txt_dark.insert("1.0", "\n".join(get("queries_dark")))
 
         ctk.CTkLabel(tab, text="Modo claro:", anchor="w").grid(
-            row=4, column=0, sticky="w", padx=8)
+            row=4, column=0, sticky="w", padx=8
+        )
         self.txt_light = ctk.CTkTextbox(tab, height=95, width=660)
         self.txt_light.grid(row=5, column=0, sticky="ew", padx=8, pady=(2, 10))
         self.txt_light.insert("1.0", "\n".join(get("queries_light")))
 
-    def _build_about(self, tab, open_folder: Callable[[], None],
-                     forget_history: Callable[[], None]) -> None:
+    def _build_about(
+        self, tab, open_folder: Callable[[], None], forget_history: Callable[[], None]
+    ) -> None:
         tab.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
-            tab, text="WallpaperChanger v%s" % APP_VERSION,
+            tab,
+            text="WallpaperChanger v%s" % APP_VERSION,
             font=ctk.CTkFont(size=16, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=10, pady=(14, 4))
         ctk.CTkLabel(
-            tab, justify="left", anchor="w", wraplength=640,
+            tab,
+            justify="left",
+            anchor="w",
+            wraplength=640,
             text=(
                 "Muda o wallpaper automaticamente, sempre a condizer com o "
                 "tema do sistema: modo escuro → wallpapers escuros, modo "
@@ -348,7 +413,9 @@ class SettingsWindow(ctk.CTkToplevel):
         row = ctk.CTkFrame(tab, fg_color="transparent")
         row.grid(row=2, column=0, sticky="w", padx=10, pady=(12, 10))
         ctk.CTkButton(
-            row, text="Abrir pasta de imagens", width=180,
+            row,
+            text="Abrir pasta de imagens",
+            width=180,
             command=open_folder,
         ).pack(side="left")
 
@@ -356,11 +423,16 @@ class SettingsWindow(ctk.CTkToplevel):
             forget_history()
             self._set_status("Histórico de wallpapers usados esquecido.")
             self._refresh_gallery()
-            self._set_preview_status("Histórico esquecido — as imagens podem repetir-se.")
+            self._set_preview_status(
+                "Histórico esquecido — as imagens podem repetir-se."
+            )
 
         ctk.CTkButton(
-            row, text="Esquecer wallpapers usados", width=200,
-            fg_color=("gray75", "gray25"), hover_color=("gray65", "gray35"),
+            row,
+            text="Esquecer wallpapers usados",
+            width=200,
+            fg_color=("gray75", "gray25"),
+            hover_color=("gray65", "gray35"),
             command=forget,
         ).pack(side="left", padx=8)
 
@@ -368,71 +440,93 @@ class SettingsWindow(ctk.CTkToplevel):
     # Pré-visualização
     # ------------------------------------------------------------------
     def _refresh_gallery(self, select: str | None = None) -> None:
+        """Recarrega a galeria; o hashing das imagens corre num worker."""
+        if select is not None:
+            self._gallery_select = select
+        if self._gallery_loading:
+            return  # já está um recarregamento em curso (usa o select novo)
+        self._gallery_loading = True
+        threading.Thread(target=self._gallery_worker, daemon=True).start()
+
+    def _gallery_worker(self) -> None:
+        try:
+            paths = [str(p) for p in self._recent()]
+        except Exception:  # noqa: BLE001 - a galeria nunca deve rebentar a UI
+            paths = []
+        self._status_q.put(("gallery", True, "", paths))
+
+    def _rebuild_gallery(self, paths: list[str]) -> None:
+        self._gallery_loading = False
+        select = self._gallery_select
+        self._gallery_select = None
         for child in self.gallery.winfo_children():
             child.destroy()
         self._tiles.clear()
         self._gallery_thumbs = []
 
-        paths = [Path(p) for p in self._recent()]
-        if not paths:
+        path_objs = [Path(p) for p in paths]
+        if not path_objs:
             ctk.CTkLabel(
-                self.gallery, text="Sem imagens guardadas ainda.",
+                self.gallery,
+                text="Sem imagens guardadas ainda.",
                 text_color=("gray45", "gray55"),
             ).pack(padx=10, pady=30)
             self.apply_btn.configure(state="disabled")
             self._selected_path = None
             return
 
-        for path in paths:
+        for path in path_objs:
             try:
-                img = Image.open(path)
-                img.thumbnail((150, 84))
-                tile_img = ctk.CTkImage(
-                    light_image=img, dark_image=img, size=img.size
-                )
+                with Image.open(path) as img:
+                    img.thumbnail((150, 84))
+                    tile_img = ctk.CTkImage(
+                        light_image=img, dark_image=img, size=img.size
+                    )
             except Exception:  # noqa: BLE001 - ficheiro inválido: ignora
                 continue
             self._gallery_thumbs.append(tile_img)
             btn = ctk.CTkButton(
-                self.gallery, image=tile_img, text="", width=156, height=88,
-                fg_color="transparent", hover_color=("gray80", "gray25"),
-                border_width=2, border_color=("gray90", "gray14"),
+                self.gallery,
+                image=tile_img,
+                text="",
+                width=156,
+                height=88,
+                fg_color="transparent",
+                hover_color=("gray80", "gray25"),
+                border_width=2,
+                border_color=("gray90", "gray14"),
                 command=lambda p=path: self._select(p),
             )
             btn.pack(side="left", padx=4, pady=6)
             self._tiles[str(path)] = (tile_img, btn)
 
         target = select or (str(self._selected_path) if self._selected_path else None)
-        chosen = None
-        if target and target in self._tiles:
-            chosen = Path(target)
-        else:
-            chosen = paths[0]
+        chosen = Path(target) if target and target in self._tiles else path_objs[0]
         if chosen:
             self._select(chosen)
 
     def _select(self, path: Path) -> None:
         try:
-            img = Image.open(path)
+            with Image.open(path) as img:
+                size = img.size
+                thumb = img.copy()
+                thumb.thumbnail((680, 250))
+                self._preview_photo = ctk.CTkImage(
+                    light_image=thumb, dark_image=thumb, size=thumb.size
+                )
         except Exception:  # noqa: BLE001
             self.preview_status.configure(text="Não consegui abrir esta imagem.")
             return
-        full = img.copy()
-        thumb = img.copy()
-        thumb.thumbnail((680, 250))
-        self._preview_photo = ctk.CTkImage(
-            light_image=thumb, dark_image=thumb, size=thumb.size
-        )
         self.preview_label.configure(image=self._preview_photo, text="")
 
         try:
             stat = path.stat()
             date = datetime.fromtimestamp(stat.st_mtime)
-            info = "%s · %s · %d×%d" % (
+            info = "%s · %s · %d×%d" % (  # noqa: RUF001
                 _source_from_path(path),
                 date.strftime("%d/%m %H:%M"),
-                full.width,
-                full.height,
+                size[0],
+                size[1],
             )
             if get("paused"):
                 info += " · mudanças em pausa"
@@ -443,8 +537,7 @@ class SettingsWindow(ctk.CTkToplevel):
         for key, (_, btn) in self._tiles.items():
             is_sel = key == str(path)
             btn.configure(
-                border_color=("#3a7ebf", "#4a9eff") if is_sel
-                else ("gray90", "gray14")
+                border_color=("#3a7ebf", "#4a9eff") if is_sel else ("gray90", "gray14")
             )
         self._selected_path = path
         self.apply_btn.configure(state="normal")
@@ -469,9 +562,7 @@ class SettingsWindow(ctk.CTkToplevel):
         self.apply_btn.configure(state="disabled")
         self.suggest_btn.configure(state="disabled")
         self.preview_status.configure(text="A aplicar…")
-        threading.Thread(
-            target=self._apply_worker, args=(path,), daemon=True
-        ).start()
+        threading.Thread(target=self._apply_worker, args=(path,), daemon=True).start()
 
     def _apply_worker(self, path: str) -> None:
         try:
@@ -542,7 +633,8 @@ class SettingsWindow(ctk.CTkToplevel):
                     self._set_preview_status(msg, error=not ok)
                     self.suggest_btn.configure(state="normal")
                     self.apply_btn.configure(
-                        state="normal" if (ok and extra) else "disabled")
+                        state="normal" if (ok and extra) else "disabled"
+                    )
                     if ok and extra:
                         self._refresh_gallery(select=extra)
                 elif kind == "applied":
@@ -552,9 +644,11 @@ class SettingsWindow(ctk.CTkToplevel):
                     if ok and extra:
                         self._selected_path = Path(extra)
                         self._refresh_gallery(select=extra)
+                elif kind == "gallery":
+                    self._rebuild_gallery(extra)
                 try:
                     self.header_status.configure(text=self._header_text())
-                except Exception:
+                except Exception:  # noqa: BLE001 - a janela pode ter fechado
                     pass
         except queue.Empty:
             pass
@@ -566,7 +660,7 @@ class SettingsWindow(ctk.CTkToplevel):
     def _header_text(self) -> str:
         try:
             return self._header_provider()
-        except Exception:
+        except Exception:  # noqa: BLE001 - o cabeçalho é informativo
             return ""
 
     def set_header_provider(self, provider: Callable[[], str]) -> None:
@@ -578,7 +672,10 @@ class SettingsWindow(ctk.CTkToplevel):
         try:
             keep = max(5, min(200, int(self.var_keep.get())))
         except (ValueError, tk.TclError):
-            self._set_status("O número de imagens a guardar deve ser 5–200.", error=True)
+            self._set_status(
+                "O número de imagens a guardar deve ser 5–200.",  # noqa: RUF001
+                error=True,
+            )
             return
         values = {
             "use_unsplash": self.var_unsplash.get(),
@@ -592,12 +689,14 @@ class SettingsWindow(ctk.CTkToplevel):
             "startup": self.var_startup.get(),
             "keep": keep,
             "queries_dark": [
-                l.strip() for l in
-                self.txt_dark.get("1.0", "end").splitlines() if l.strip()
+                line.strip()
+                for line in self.txt_dark.get("1.0", "end").splitlines()
+                if line.strip()
             ],
             "queries_light": [
-                l.strip() for l in
-                self.txt_light.get("1.0", "end").splitlines() if l.strip()
+                line.strip()
+                for line in self.txt_light.get("1.0", "end").splitlines()
+                if line.strip()
             ],
         }
         error = self._on_save(values)

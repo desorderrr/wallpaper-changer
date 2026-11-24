@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Backend macOS: tema, wallpaper (AppleScript) e arranque (LaunchAgent)."""
+
 from __future__ import annotations
 
 import plistlib
@@ -62,13 +63,12 @@ class Platform(BasePlatform):
                 run(["launchctl", "unload", "-w", str(plist)])
                 ok, _ = run(["launchctl", "load", "-w", str(plist)])
                 return ok or plist.exists()
-            else:
-                run(["launchctl", "unload", "-w", str(plist)])
-                try:
-                    plist.unlink()
-                except FileNotFoundError:
-                    pass
-                return True
+            run(["launchctl", "unload", "-w", str(plist)])
+            try:
+                plist.unlink()
+            except FileNotFoundError:
+                pass
+            return True
         except OSError:
             return False
 

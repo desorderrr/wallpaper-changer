@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Verificação do tom (escuro/claro) das imagens."""
+
 from __future__ import annotations
 
 import io
 
 from PIL import Image, ImageStat
 
-DARK_MAX_LUMA = 115   # média de luminância abaixo disto -> imagem escura
+DARK_MAX_LUMA = 115  # média de luminância abaixo disto -> imagem escura
 LIGHT_MIN_LUMA = 140  # média de luminância acima disto -> imagem clara
 
 

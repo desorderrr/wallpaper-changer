@@ -5,6 +5,7 @@ Guarda um hash exato (sha256) e um hash percetual (aHash 8x8) de cada
 imagem aplicada. O aHash apanha a mesma foto mesmo que seja recomprimida
 ou redimensionada.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -38,8 +39,7 @@ def _load() -> list[dict]:
         data = json.loads(history_file().read_text(encoding="utf-8"))
         raw = data.get("items") if isinstance(data, dict) else []
         _items = [
-            i for i in raw
-            if isinstance(i, dict) and isinstance(i.get("ahash"), str)
+            i for i in raw if isinstance(i, dict) and isinstance(i.get("ahash"), str)
         ]
     except (OSError, ValueError):
         _items = []
@@ -74,7 +74,7 @@ def _fingerprint(data: bytes) -> tuple[str, int]:
     bits = 0
     for p in pixels:
         bits = (bits << 1) | (1 if p >= avg else 0)
-    return "%016x" % bits, int(round(avg))
+    return "%016x" % bits, round(avg)
 
 
 def ahash(data: bytes) -> str:
@@ -91,7 +91,7 @@ def ahash_path(path) -> str | None:
 
 def _hamming(a: str, b: str) -> int:
     try:
-        return bin(int(a, 16) ^ int(b, 16)).count("1")
+        return (int(a, 16) ^ int(b, 16)).bit_count()
     except ValueError:
         return 64
 

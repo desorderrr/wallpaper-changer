@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """Utilitário de desenvolvimento: captura a janela de definições."""
+
 import ctypes
 import ctypes.wintypes as wt
+import os
 import time
 from pathlib import Path
 
-import os
-
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
-except Exception:
+except Exception:  # noqa: BLE001 - DPI awareness é opcional neste script
     pass
 
 import customtkinter as ctk
@@ -35,8 +35,13 @@ gdi32.SelectObject.restype = wt.HGDIOBJ
 gdi32.SelectObject.argtypes = [wt.HDC, wt.HGDIOBJ]
 gdi32.GetDIBits.restype = ctypes.c_int
 gdi32.GetDIBits.argtypes = [
-    wt.HDC, wt.HBITMAP, wt.UINT, wt.UINT, ctypes.c_void_p,
-    ctypes.c_void_p, wt.UINT,
+    wt.HDC,
+    wt.HBITMAP,
+    wt.UINT,
+    wt.UINT,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    wt.UINT,
 ]
 gdi32.DeleteObject.argtypes = [wt.HGDIOBJ]
 gdi32.DeleteDC.argtypes = [wt.HDC]
@@ -45,11 +50,17 @@ user32.ReleaseDC.argtypes = [wt.HWND, wt.HDC]
 
 class BITMAPINFOHEADER(ctypes.Structure):
     _fields_ = [
-        ("biSize", wt.DWORD), ("biWidth", wt.LONG), ("biHeight", wt.LONG),
-        ("biPlanes", wt.WORD), ("biBitCount", wt.WORD),
-        ("biCompression", wt.DWORD), ("biSizeImage", wt.DWORD),
-        ("biXPelsPerMeter", wt.LONG), ("biYPelsPerMeter", wt.LONG),
-        ("biClrUsed", wt.DWORD), ("biClrImportant", wt.DWORD),
+        ("biSize", wt.DWORD),
+        ("biWidth", wt.LONG),
+        ("biHeight", wt.LONG),
+        ("biPlanes", wt.WORD),
+        ("biBitCount", wt.WORD),
+        ("biCompression", wt.DWORD),
+        ("biSizeImage", wt.DWORD),
+        ("biXPelsPerMeter", wt.LONG),
+        ("biYPelsPerMeter", wt.LONG),
+        ("biClrUsed", wt.DWORD),
+        ("biClrImportant", wt.DWORD),
     ]
 
 
@@ -106,7 +117,9 @@ def main() -> None:
         open_folder=open_image_folder,
         preview_candidate=lambda: (False, "", None),
         apply_image=lambda path: (True, "ok"),
-        list_recent=__import__("wallpaper_changer.app", fromlist=["app"]).list_recent_images,
+        list_recent=__import__(
+            "wallpaper_changer.app", fromlist=["app"]
+        ).list_recent_images,
         forget_history=lambda: None,
     )
     win.set_header_provider(status_text)

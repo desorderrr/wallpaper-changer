@@ -4,20 +4,49 @@
 Todas as funções recebem ``want_dark`` e tentam várias candidatas até
 encontrar uma com o tom pedido (verificação por luminância).
 """
+
 from __future__ import annotations
 
 import random
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from . import config, history, tone
 
 UA = {"User-Agent": config.APP_NAME}
 MAX_TONE_TRIES = 6
 
+_session: requests.Session | None = None
+
+
+def _http_get(url: str, **kwargs) -> requests.Response:
+    """GET com sessão partilhada, retries e backoff exponencial.
+
+    Erros transitórios (rede, 429, 5xx) são tentados de novo em vez de
+    deitar fora o ciclo inteiro da fonte.
+    """
+    global _session
+    if _session is None:
+        _session = requests.Session()
+        retry = Retry(
+            total=3,
+            connect=3,
+            read=3,
+            backoff_factor=0.8,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=frozenset(["GET"]),
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        _session.mount("https://", adapter)
+        _session.mount("http://", adapter)
+        _session.headers.update(UA)
+    return _session.get(url, **kwargs)
+
 
 def download(url: str, timeout: int = 30) -> bytes:
-    r = requests.get(url, timeout=timeout, headers=UA)
+    r = _http_get(url, timeout=timeout)
     r.raise_for_status()
     return r.content
 
@@ -48,7 +77,7 @@ def fetch_unsplash(want_dark: bool) -> bytes:
     color = "black" if want_dark else "white"
 
     def search(extra: dict) -> list:
-        r = requests.get(
+        r = _http_get(
             "https://api.unsplash.com/search/photos",
             params={
                 "query": query,
@@ -120,10 +149,9 @@ def _bing_candidates(payload: dict) -> list[tuple[str | None, str]]:
 
 def fetch_bing(want_dark: bool = True) -> bytes:
     """Foto do dia do Bing (sem API key), com variedade dos últimos dias."""
-    r = requests.get(
+    r = _http_get(
         "https://www.bing.com/HPImageArchive.aspx",
         params={"format": "js", "idx": 0, "n": 8, "mkt": "pt-PT"},
-        headers=UA,
         timeout=20,
     )
     r.raise_for_status()
@@ -169,9 +197,7 @@ def fetch_wallhaven(want_dark: bool = True) -> bytes:
 
     for extra in ({"colors": color}, {}):
         try:
-            r = requests.get(
-                api, params={**base, **extra}, headers=UA, timeout=20
-            )
+            r = _http_get(api, params={**base, **extra}, timeout=20)
             r.raise_for_status()
             data = r.json().get("data") or []
         except requests.RequestException:
