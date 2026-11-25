@@ -25,7 +25,7 @@ def test_recompressed_image_is_detected(data_dir):
     base.save(a, "JPEG", quality=95)
     history.add(a.getvalue(), "teste")
 
-    # mesma imagem, menor e com compressão diferente
+    # same image, smaller and with different compression
     b = io.BytesIO()
     base.resize((320, 180)).save(b, "JPEG", quality=60)
     assert history.is_duplicate(b.getvalue())
@@ -47,7 +47,7 @@ def test_reset_forgets_history(data_dir):
 def test_history_is_persisted(data_dir):
     data = jpg((30, 30, 30))
     history.add(data, "teste", "x.jpg")
-    # limpa a cache em memória e recarrega do ficheiro
+    # clear the in-memory cache and reload from disk
     history._items = None
     assert history.is_duplicate(data)
 
@@ -61,5 +61,5 @@ def test_seed_from_folder(data_dir):
 
     assert history.seed_from_folder() == 1
     assert history.is_duplicate(img)
-    # se já houver histórico, não semeia outra vez
+    # if history already exists, do not seed again
     assert history.seed_from_folder() == 0

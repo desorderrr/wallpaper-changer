@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Interface comum da camada de sistema operativo."""
+"""Common interface for the operating-system layer."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ class BasePlatform:
     name = "Generic"
 
     def is_light_theme(self) -> bool:
-        """True se o sistema está em modo claro."""
+        """True when the system is in light mode."""
         return True
 
     def set_wallpaper(self, path: Path) -> None:
@@ -28,7 +28,7 @@ class BasePlatform:
 
 
 def run(args: list[str], timeout: int = 20) -> tuple[bool, str]:
-    """Corre um comando e devolve (sucesso, saída+erros)."""
+    """Run a command and return (success, stdout+stderr)."""
     try:
         p = subprocess.run(
             args, capture_output=True, text=True, timeout=timeout, check=False
@@ -40,11 +40,11 @@ def run(args: list[str], timeout: int = 20) -> tuple[bool, str]:
 
 
 def theme_is_light(apps_value: int | None, system_value: int | None) -> bool:
-    """Decide o modo claro/escuro a partir das chaves do Windows.
+    """Decide light/dark mode from the Windows registry keys.
 
-    O "modo das aplicações" (AppsUseLightTheme) é o que a maioria dos
-    utilizadores muda em Definições → Cores, por isso tem prioridade;
-    o "modo do Windows" (SystemUsesLightTheme) é o fallback.
+    "App mode" (AppsUseLightTheme) is what most users change in
+    Settings → Colors, so it takes priority; "Windows mode"
+    (SystemUsesLightTheme) is the fallback.
     """
     if apps_value is not None:
         return bool(apps_value)

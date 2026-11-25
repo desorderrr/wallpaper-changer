@@ -77,7 +77,7 @@ def test_set_many_writes_once(data_dir, monkeypatch):
 def test_empty_queries_fall_back_to_defaults(data_dir):
     config.set_key("queries_dark", [])
     assert config.get("queries_dark") == config.DEFAULTS["queries_dark"]
-    config.set_key("queries_light", "não é uma lista")
+    config.set_key("queries_light", "not a list")
     assert config.get("queries_light") == config.DEFAULTS["queries_light"]
     config.load_settings()
     assert config.get("queries_dark") == config.DEFAULTS["queries_dark"]
@@ -86,13 +86,13 @@ def test_empty_queries_fall_back_to_defaults(data_dir):
 
 def test_log_rotation(data_dir, monkeypatch):
     monkeypatch.setattr(config, "MAX_LOG_BYTES", 100)
-    config.log("x" * 120)  # primeira escrita passa do limite
+    config.log("x" * 120)  # first write exceeds the limit
     assert config.log_file().stat().st_size > 100
-    config.log("linha nova")  # a rotação acontece antes desta escrita
+    config.log("new line")  # rotation happens before this write
     backup = config.log_file().with_suffix(".txt.1")
     assert backup.exists()
     assert "x" * 120 in backup.read_text(encoding="utf-8")
-    assert "linha nova" in config.log_file().read_text(encoding="utf-8")
+    assert "new line" in config.log_file().read_text(encoding="utf-8")
     assert config.log_file().stat().st_size < 100
 
 

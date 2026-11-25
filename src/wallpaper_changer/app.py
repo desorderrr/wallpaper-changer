@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""WallpaperChanger — ícone na bandeja, agendador e janela de definições."""
+"""WallpaperChanger — tray icon, scheduler and settings window."""
 
 from __future__ import annotations
 
@@ -28,11 +28,11 @@ _pystray = None
 
 
 def _get_pystray():
-    """Importa o pystray, com fallback para o backend X11 no Linux.
+    """Import pystray, with an X11 backend fallback on Linux.
 
-    Em alguns Linux o `gi` existe mas faltam os typelibs do GTK3, o que faz
-    o pystray rebentar antes de tentar o backend Xorg. Nesses casos forçamos
-    PYSTRAY_BACKEND=xorg (requer python-xlib).
+    On some Linux setups `gi` exists but the GTK3 typelibs are missing, so
+    pystray fails before trying the Xorg backend. In that case we force
+    PYSTRAY_BACKEND=xorg (requires python-xlib).
     """
     global _pystray
     if _pystray is not None:
@@ -57,7 +57,7 @@ def _get_pystray():
 
 
 # ---------------------------------------------------------------------------
-# Estado de execução (mostrado na UI)
+# Runtime state (shown in the UI)
 # ---------------------------------------------------------------------------
 state: dict = {
     "last_change": None,
@@ -67,9 +67,9 @@ state: dict = {
     "last_error": None,
 }
 
-_state_lock = threading.RLock()  # estado lido na UI, escrito nos workers
+_state_lock = threading.RLock()  # read in the UI, written by workers
 _change_lock = threading.Lock()
-_wake = threading.Event()  # sinaliza mudança de settings -> reagenda
+_wake = threading.Event()  # settings changed -> reschedule
 _ui_queue: queue.Queue[str] | None = None
 _tray_icon = None
 _settings_win = None
@@ -77,7 +77,7 @@ _instance_socket = None
 
 
 # ---------------------------------------------------------------------------
-# Lógica principal
+# Core logic
 # ---------------------------------------------------------------------------
 def effective_theme_is_dark() -> bool:
     mode = get("theme_mode")
@@ -137,7 +137,7 @@ def cleanup_images() -> None:
 
 
 def _enabled_sources() -> list[tuple[str, str, object]]:
-    """(id, nome, função de fetch) das fontes ativas, por ordem aleatória."""
+    """(id, name, fetch function) of the active sources, in random order."""
     entries: list[tuple[str, str, object]] = []
     if get("use_unsplash"):
         entries.append(("unsplash", "Unsplash", sources.fetch_unsplash))
@@ -150,7 +150,7 @@ def _enabled_sources() -> list[tuple[str, str, object]]:
 
 
 def change_wallpaper(manual: bool = False) -> tuple[bool, str]:
-    """Troca o wallpaper respeitando o tema. Devolve (sucesso, mensagem)."""
+    """Change the wallpaper respecting the theme. Returns (success, message)."""
     if not _change_lock.acquire(blocking=False):
         return False, t("Já existe uma troca de wallpaper em curso.")
     try:
@@ -176,20 +176,20 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
             data = fetch(want_dark)
 
             luma = tone.mean_luminance(data)
-            config.log("Fonte %s: luma=%.0f (queria %s)" % (name, luma, tone_name))
+            config.log("Source %s: luma=%.0f (wanted %s)" % (name, luma, tone_name))
             if not tone.tone_matches(luma, want_dark):
                 last_error = t("%s devolveu uma imagem com o tom errado") % name
                 continue
             if history.is_duplicate(data):
                 last_error = t("%s devolveu um wallpaper repetido") % name
-                config.log("Repetido de %s ignorado" % name)
+                config.log("Duplicate from %s ignored" % name)
                 continue
 
             path = save_image(data, src)
             try:
                 platform.set_wallpaper(path)
             except Exception:
-                # não deixar ficheiros órfãos quando a aplicação falha
+                # do not leave orphan files when applying fails
                 try:
                     path.unlink(missing_ok=True)
                 except OSError:
@@ -205,11 +205,11 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
                     last_path=str(path),
                     last_error=None,
                 )
-            config.log("Wallpaper %s aplicado: %s" % (tone_name, path))
+            config.log("Wallpaper %s applied: %s" % (tone_name, path))
             return True, t("Wallpaper %s aplicado (%s).") % (t(tone_name), name)
-        except Exception as e:  # noqa: BLE001 - qualquer fonte pode falhar
+        except Exception as e:  # noqa: BLE001 - any source may fail
             last_error = "%s: %s" % (name, e)
-            config.log("Erro em %s: %r" % (name, e))
+            config.log("Error in %s: %r" % (name, e))
 
     msg = t("Não consegui obter uma imagem %s agora. %s") % (t(tone_name), last_error)
     with _state_lock:
@@ -219,14 +219,14 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
 
 
 def _source_key(path) -> str:
-    """Extrai a fonte do nome do ficheiro (ex.: preview_unsplash_2026...)."""
+    """Extract the source from the filename (e.g. preview_unsplash_2026...)."""
     stem = path.stem
     stem = stem.removeprefix("preview_")
     return stem.split("_", 1)[0]
 
 
 def obtain_candidate() -> tuple[bool, str, str | None]:
-    """Obtém uma imagem (sem aplicar) para a pré-visualização."""
+    """Fetch an image (without applying it) for the preview."""
     want_dark = effective_theme_is_dark()
     tone_name = "escuro" if want_dark else "claro"
     enabled = _enabled_sources()
@@ -246,13 +246,13 @@ def obtain_candidate() -> tuple[bool, str, str | None]:
                 continue
             if history.is_duplicate(data):
                 errors.append(t("%s: wallpaper já usado") % name)
-                config.log("Sugestão repetida de %s ignorada" % name)
+                config.log("Repeated suggestion from %s ignored" % name)
                 continue
             path = save_image(data, "preview_" + src)
             return True, t("Sugestão do %s (tom %s).") % (name, t(tone_name)), str(path)
         except Exception as e:  # noqa: BLE001
             errors.append("%s: %s" % (name, e))
-            config.log("Erro na sugestão (%s): %r" % (name, e))
+            config.log("Error in suggestion (%s): %r" % (name, e))
     return (
         False,
         t("Não consegui obter uma sugestão. %s") % "; ".join(errors[-2:]),
@@ -261,7 +261,7 @@ def obtain_candidate() -> tuple[bool, str, str | None]:
 
 
 def apply_file(path) -> tuple[bool, str]:
-    """Aplica um ficheiro de imagem já existente."""
+    """Apply an existing image file."""
     from pathlib import Path as _Path
 
     path = _Path(path)
@@ -278,15 +278,15 @@ def apply_file(path) -> tuple[bool, str]:
                 last_path=str(path),
                 last_error=None,
             )
-        config.log("Wallpaper aplicado manualmente: %s" % path)
+        config.log("Wallpaper applied manually: %s" % path)
         return True, t("Wallpaper aplicado.")
     except Exception as e:  # noqa: BLE001
-        config.log("Erro ao aplicar %s: %r" % (path, e))
+        config.log("Error applying %s: %r" % (path, e))
         return False, t("Não consegui aplicar o wallpaper: %s") % e
 
 
 def list_recent_images(limit: int = 24) -> list:
-    """Imagens guardadas (sem duplicados percetuais), da mais recente."""
+    """Saved images (without perceptual duplicates), newest first."""
     try:
         files = sorted(
             config.image_dir().glob("*.jpg"),
@@ -311,13 +311,13 @@ def list_recent_images(limit: int = 24) -> list:
 
 
 def forget_history() -> None:
-    """Esquece os wallpapers usados (permite voltar a vê-los)."""
+    """Forget used wallpapers (allows seeing them again)."""
     history.reset()
-    config.log("Histórico de wallpapers usados esquecido")
+    config.log("Used wallpaper history forgotten")
 
 
 # ---------------------------------------------------------------------------
-# Agendador + vigilante do tema
+# Scheduler + theme watcher
 # ---------------------------------------------------------------------------
 def scheduler_loop() -> None:
     while True:
@@ -330,9 +330,9 @@ def scheduler_loop() -> None:
             _wake.clear()
             continue
         if get("paused"):
-            config.log("Mudanças automáticas em pausa; ciclo ignorado")
+            config.log("Automatic changes paused; cycle skipped")
             continue
-        config.log("Ciclo agendado (%s)" % interval)
+        config.log("Scheduled cycle (%s)" % interval)
         ok, msg = change_wallpaper()
         if not ok:
             config.log(msg)
@@ -348,12 +348,11 @@ def theme_watcher_loop() -> None:
                 last = current
                 if get("theme_mode") == "auto":
                     config.log(
-                        "Tema do sistema mudou para %s"
-                        % ("claro" if current else "escuro")
+                        "System theme changed to %s" % ("light" if current else "dark")
                     )
                     change_wallpaper()
         except Exception as e:  # noqa: BLE001
-            config.log("Erro no vigilante de tema: %r" % e)
+            config.log("Error in theme watcher: %r" % e)
 
 
 # ---------------------------------------------------------------------------
@@ -362,8 +361,8 @@ def theme_watcher_loop() -> None:
 def _notify(icon, msg: str) -> None:
     try:
         (icon or _tray_icon).notify(msg, APP_NAME)
-    except Exception:  # noqa: BLE001 - notificações são best-effort
-        config.log("(notificação indisponível) %s" % msg)
+    except Exception:  # noqa: BLE001 - notifications are best-effort
+        config.log("(notification unavailable) %s" % msg)
 
 
 def _apply_settings(values: dict) -> str | None:
@@ -384,12 +383,12 @@ def _apply_settings(values: dict) -> str | None:
         }
     )
     i18n.apply_language()
-    if _tray_icon is not None:  # atualiza a bandeja para o idioma novo
+    if _tray_icon is not None:  # refresh the tray for the new language
         try:
             _tray_icon.menu = build_menu()
             _tray_icon.update_menu()
-        except Exception:  # noqa: BLE001 - a bandeja volta ao normal no restart
-            config.log("Não consegui atualizar o menu da bandeja")
+        except Exception:  # noqa: BLE001 - the tray returns to normal on restart
+            config.log("Could not refresh the tray menu")
     if values["startup"] != platform.startup_enabled() and not platform.set_startup(
         values["startup"]
     ):
@@ -403,7 +402,7 @@ def open_image_folder() -> None:
         config.image_dir().mkdir(parents=True, exist_ok=True)
         platform.open_folder(config.image_dir())
     except Exception as e:  # noqa: BLE001
-        config.log("Erro ao abrir pasta: %r" % e)
+        config.log("Error opening folder: %r" % e)
 
 
 def build_menu():
@@ -563,8 +562,8 @@ def build_menu():
 def on_ready(icon) -> None:
     global _tray_icon
     _tray_icon = icon
-    icon.visible = True  # obrigatório quando se usa setup personalizado
-    config.log("Arranque da aplicação v%s (%s)" % (APP_VERSION, platform.name))
+    icon.visible = True  # required when using a custom setup
+    config.log("App started v%s (%s)" % (APP_VERSION, platform.name))
 
     def initial_change():
         if get("change_on_start"):
@@ -577,7 +576,7 @@ def on_ready(icon) -> None:
 
 
 # ---------------------------------------------------------------------------
-# UI (Tk na thread principal)
+# UI (Tk on the main thread)
 # ---------------------------------------------------------------------------
 def _open_settings(root) -> None:
     global _settings_win
@@ -588,7 +587,7 @@ def _open_settings(root) -> None:
                 _settings_win.lift()
                 _settings_win.focus_force()
                 return
-        except Exception:  # noqa: BLE001 - janela fechada entretanto
+        except Exception:  # noqa: BLE001 - window closed in the meantime
             pass
         _settings_win = None
 
@@ -612,8 +611,8 @@ def _open_settings(root) -> None:
             forget_history=forget_history,
         )
         _settings_win.set_header_provider(status_text)
-    except Exception:  # noqa: BLE001 - regista o traceback e continua
-        config.log("Erro ao abrir definições:\n%s" % traceback.format_exc())
+    except Exception:  # noqa: BLE001 - log the traceback and continue
+        config.log("Error opening settings:\n%s" % traceback.format_exc())
         _settings_win = None
 
 
@@ -627,7 +626,7 @@ def _make_root():
     root.withdraw()
     try:
         root.iconphoto(True, make_icon_image())
-    except Exception:  # noqa: BLE001 - ícone é cosmético
+    except Exception:  # noqa: BLE001 - the icon is cosmetic
         pass
     return root
 
@@ -651,7 +650,7 @@ def _run_ui(root) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Instância única
+# Single instance
 # ---------------------------------------------------------------------------
 def acquire_single_instance() -> bool:
     global _instance_socket
@@ -673,12 +672,12 @@ def acquire_single_instance() -> bool:
 
 
 def warn_dialog(msg: str) -> None:
-    """Mostra uma mensagem ao utilizador em qualquer sistema."""
+    """Show a message to the user on any system."""
     try:
         if sys.platform == "win32":
             ctypes.windll.user32.MessageBoxW(None, msg, APP_NAME, 0x40)
         elif sys.platform == "darwin":
-            # escapa primeiro as barras para não criar sequências de escape
+            # escape backslashes first to avoid creating escape sequences
             safe = msg.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
             script = 'display dialog "%s" buttons {"OK"} with title "%s"' % (
                 safe,
@@ -687,7 +686,7 @@ def warn_dialog(msg: str) -> None:
             subprocess.run(["osascript", "-e", script], timeout=10)
         else:
             subprocess.run(["notify-send", APP_NAME, msg], timeout=10)
-    except Exception:  # noqa: BLE001 - aviso é best-effort
+    except Exception:  # noqa: BLE001 - the warning is best-effort
         pass
 
 
@@ -697,7 +696,7 @@ def warn_already_running() -> None:
         "Procura o ícone (círculo meio-escuro / meio-claro) na bandeja "
         "do sistema."
     )
-    config.log("Já existe uma instância em execução; a sair.")
+    config.log("Another instance is already running; exiting.")
     warn_dialog(msg)
 
 
@@ -710,7 +709,7 @@ def main() -> None:
     try:
         pystray = _get_pystray()
     except Exception as e:  # noqa: BLE001
-        config.log("Erro ao carregar a bandeja: %r" % e)
+        config.log("Error loading the tray: %r" % e)
         warn_dialog(str(e))
         return
 
@@ -725,15 +724,15 @@ def main() -> None:
     try:
         seeded = history.seed_from_folder()
         if seeded:
-            config.log("Histórico inicial: %d imagens existentes marcadas" % seeded)
+            config.log("Initial history: %d existing images marked" % seeded)
     except Exception as e:  # noqa: BLE001
-        config.log("Erro ao semear histórico: %r" % e)
+        config.log("Error seeding history: %r" % e)
     _ui_queue = queue.Queue()
-    if "--settings" in sys.argv:  # abrir as definições ao arrancar
+    if "--settings" in sys.argv:  # open settings at startup
         _ui_queue.put("settings")
 
-    # Em macOS o Tk e o pystray partilham o mesmo NSApplication: a janela
-    # principal é criada primeiro e a tray integra-se no loop do Tk.
+    # On macOS Tk and pystray share the same NSApplication: the main window
+    # is created first and the tray integrates into the Tk loop.
     root = _make_root()
 
     icon_kwargs = {}
@@ -760,7 +759,7 @@ def main() -> None:
             try:
                 icon.run(setup=on_ready)
             except Exception as e:  # noqa: BLE001
-                config.log("Erro na bandeja do sistema: %r" % e)
+                config.log("Error in the system tray: %r" % e)
                 warn_dialog(t("Não consegui iniciar a bandeja do sistema: %s") % e)
 
         threading.Thread(target=run_tray, daemon=True).start()
@@ -768,7 +767,7 @@ def main() -> None:
     try:
         _run_ui(root)
     finally:
-        config.log("Aplicação terminada")
+        config.log("Application stopped")
 
 
 if __name__ == "__main__":

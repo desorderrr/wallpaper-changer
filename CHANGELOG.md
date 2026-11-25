@@ -7,6 +7,24 @@ and the project uses [Semantic Versioning](https://semver.org/).
 > From 2.4.0 onwards the changelog and commit messages are written in English.
 > The README and the app's Portuguese locale remain in Portuguese.
 
+## [Unreleased]
+
+### Fixed
+
+- CI flakiness on `windows-latest` / Python 3.10: the runner's Tcl/Tk install
+  can be broken (`ttk/defaults.tcl` missing). UI tests now share a single Tk
+  root and skip cleanly when Tk cannot be initialised. (The `v2.4.0` tag build
+  passed with the same code — this was an environment issue.)
+
+### Changed
+
+- **The whole repository is now in English**: README, CI job/step names,
+  `.gitignore` comments, `pyproject.toml` metadata and ruff comments, all
+  module/function docstrings and inline comments, log messages, build scripts
+  and test messages. Commit messages and the changelog were already in English.
+- The Portuguese UI strings remain in the code on purpose: they are the
+  source locale of the `pt`/`en` translation catalog.
+
 ## [2.4.0] — 2026-11-25
 
 ### Added

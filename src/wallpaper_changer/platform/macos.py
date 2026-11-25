@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Backend macOS: tema, wallpaper (AppleScript) e arranque (LaunchAgent)."""
+"""macOS backend: theme, wallpaper (AppleScript) and startup (LaunchAgent)."""
 
 from __future__ import annotations
 
@@ -17,16 +17,16 @@ def launch_agent_path() -> Path:
 
 
 def parse_defaults(stdout: str, returncode: int) -> bool:
-    """Converte a saída de `defaults read -g AppleInterfaceStyle` em claro/escuro."""
+    """Convert `defaults read -g AppleInterfaceStyle` output to light/dark."""
     if returncode != 0:
-        return True  # a chave não existe -> modo claro
+        return True  # key missing -> light mode
     return "dark" not in stdout.strip().lower()
 
 
 class Platform(BasePlatform):
     name = "macOS"
 
-    # -- tema ---------------------------------------------------------
+    # -- theme ---------------------------------------------------------
     def is_light_theme(self) -> bool:
         ok, out = run(["defaults", "read", "-g", "AppleInterfaceStyle"])
         return parse_defaults(out, 0 if ok else 1)
@@ -42,7 +42,7 @@ class Platform(BasePlatform):
         if not ok:
             raise RuntimeError(t("osascript falhou: %s") % out)
 
-    # -- arranque com o sistema ----------------------------------------
+    # -- startup with the system ---------------------------------------
     def startup_enabled(self) -> bool:
         return launch_agent_path().exists()
 
@@ -73,6 +73,6 @@ class Platform(BasePlatform):
         except OSError:
             return False
 
-    # -- diversos -------------------------------------------------------
+    # -- misc ----------------------------------------------------------
     def open_folder(self, path: Path) -> None:
         run(["open", str(path)])

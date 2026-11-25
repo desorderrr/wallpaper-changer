@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""WallpaperChanger — wallpapers automáticos escuros/claros.
+"""WallpaperChanger — automatic dark/light wallpapers.
 
-A versão vive aqui (única fonte de verdade): o ``pyproject.toml`` lê-a
-dinamicamente e ``config.APP_VERSION`` importa-a daqui.
+The version lives here (single source of truth): ``pyproject.toml`` reads it
+dynamically and ``config.APP_VERSION`` imports it from here.
 """
 
 __version__ = "2.4.0"

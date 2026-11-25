@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Configurações, caminhos e utilidades comuns."""
+"""Settings, paths and common utilities."""
 
 from __future__ import annotations
 
@@ -15,18 +15,18 @@ from . import __version__
 APP_NAME = "WallpaperChanger"
 APP_VERSION = __version__
 
-# O log é rodado quando passa deste tamanho (evita ficheiros gigantes
-# numa app que pode correr durante meses).
+# Rotate the log past this size (avoids huge files in an app that may run
+# for months).
 MAX_LOG_BYTES = 1_000_000
 
 DEFAULTS = {
     "interval": "daily",  # startup_only | 5m | 10m | 15m | 30m | 1h | 2h | 3h | 6h | 12h | daily
-    "theme_mode": "auto",  # auto (segue o sistema) | dark | light
-    "language": "auto",  # auto (segue o sistema) | pt | en
+    "theme_mode": "auto",  # auto (follows system) | dark | light
+    "language": "auto",  # auto (follows system) | pt | en
     "use_unsplash": True,
     "use_bing": True,
     "use_wallhaven": False,
-    "paused": False,  # pausa as mudanças automáticas
+    "paused": False,  # pauses automatic changes
     "change_on_start": True,
     "unsplash_key": "",
     "keep": 20,
@@ -73,7 +73,7 @@ INTERVAL_LABELS = [
 
 
 def interval_labels() -> list[tuple[str, str]]:
-    """Pares (id, rótulo traduzido) para mostrar na UI e na bandeja."""
+    """(id, translated label) pairs for the UI and tray."""
     from .i18n import t
 
     return [(value, t(label)) for value, label in INTERVAL_LABELS]
@@ -84,7 +84,7 @@ _settings = dict(DEFAULTS)
 
 
 # ---------------------------------------------------------------------------
-# Caminhos (por sistema operativo; WPC_DATA_DIR permite override em testes)
+# Paths (per OS; WPC_DATA_DIR allows an override in tests)
 # ---------------------------------------------------------------------------
 def data_dir() -> Path:
     override = os.environ.get("WPC_DATA_DIR")
@@ -132,7 +132,7 @@ def load_settings() -> None:
     _settings = dict(DEFAULTS)
     _settings.update({k: v for k, v in stored.items() if k in DEFAULTS})
 
-    # Migração/validação de valores antigos (ex.: nomes em vez de ids)
+    # Migration / validation of old values (e.g. labels instead of ids)
     labels_to_values = {label: value for value, label in INTERVAL_LABELS}
     if (
         _settings.get("interval") not in INTERVALS
@@ -175,7 +175,7 @@ def save_settings() -> None:
             json.dump(data, f, indent=2, ensure_ascii=False)
         os.replace(tmp, settings_file())
     except OSError as e:
-        log("Erro ao gravar settings: %s" % e)
+        log("Error writing settings: %s" % e)
 
 
 def get(key):
@@ -184,7 +184,7 @@ def get(key):
 
 
 def _validated(key, value):
-    """Normaliza valores problemáticos antes de gravar."""
+    """Normalise problematic values before writing."""
     if key in ("queries_dark", "queries_light") and (
         not isinstance(value, list) or not value
     ):
@@ -197,7 +197,7 @@ def set_key(key, value) -> None:
 
 
 def set_many(values: dict) -> None:
-    """Atualiza várias keys e grava o ficheiro uma única vez."""
+    """Update several keys and write the file only once."""
     with _lock:
         for key, value in values.items():
             _settings[key] = _validated(key, value)
@@ -220,13 +220,13 @@ def log(msg: str) -> None:
 
 
 def self_command() -> list[str]:
-    """Comando para relançar a app (usado no arranque automático)."""
+    """Command used to relaunch the app (for autostart)."""
     if getattr(sys, "frozen", False):
         return [sys.executable]
     exe = sys.executable
     if os.name == "nt":
-        # pythonw.exe corre sem janela de consola; evita o terminal
-        # preto que ficava aberto no arranque com o Windows.
+        # pythonw.exe runs without a console window; avoids the black terminal
+        # that used to appear on Windows startup.
         pythonw = Path(exe).with_name("pythonw.exe")
         if pythonw.is_file():
             exe = str(pythonw)

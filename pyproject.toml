@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "wallpaper-changer"
 dynamic = ["version"]
-description = "Wallpapers automáticos escuros/claros para Windows, macOS e Linux"
+description = "Automatic dark/light wallpapers for Windows, macOS and Linux"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -60,20 +60,20 @@ select = [
     "RUF", "S", "PL", "PIE", "RET", "FURB",
 ]
 ignore = [
-    "UP031",    # o projeto usa formatação % por estilo
-    "UP009",    # cabeçalhos de encoding são convenção do projeto
-    "S110",     # try/except/pass em operações best-effort
-    "S112",     # try/except/continue nas fontes de imagens é intencional
-    "PLW1510",  # subprocess.run sem check é propositado
-    "PLC0415",  # imports dentro de funções são lazy imports deliberados
-    "PLW0603",  # global usado para caches à escala do módulo
-    "PLR2004",  # comparações com valores mágicos legíveis no contexto
-    "SIM105",   # except pass em operações best-effort
-    "S603",     # subprocess sem shell é o comportamento seguro por omissão
-    "S607",     # comandos de sistema (osascript, qdbus, …) vêm do PATH
-    "S311",     # random não criptográfico é aceitável para wallpapers
-    "PLR0913",  # construtores com injeção de dependências
+    "UP031",    # the project uses % formatting by style
+    "UP009",    # encoding headers are a project convention
+    "S110",     # try/except/pass in best-effort operations
+    "S112",     # try/except/continue in image sources is intentional
+    "PLW1510",  # subprocess.run without check is intentional
+    "PLC0415",  # imports inside functions are deliberate lazy imports
+    "PLW0603",  # global used for module-level caches
+    "PLR2004",  # magic-value comparisons are readable in context
+    "SIM105",   # except pass in best-effort operations
+    "S603",     # subprocess without shell is the safe default
+    "S607",     # system commands (osascript, qdbus, …) come from PATH
+    "S311",     # non-cryptographic random is fine for wallpapers
+    "PLR0913",  # constructors with dependency injection
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]  # asserts são a essência dos testes
+"tests/**" = ["S101"]  # asserts are the point of tests

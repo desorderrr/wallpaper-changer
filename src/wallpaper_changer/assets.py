@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Ícone da aplicação (gerado em código, sem ficheiros externos)."""
+"""App icon (generated in code, no external files)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 
 
 def make_icon_image(size: int = 64) -> Image.Image:
-    """Círculo metade escuro, metade claro."""
+    """A circle half dark, half light."""
     s = max(16, int(size))
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)

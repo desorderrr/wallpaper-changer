@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Fontes de imagens: Unsplash, Wallhaven e Bing Photo of the Day.
+"""Image sources: Unsplash, Wallhaven and Bing Photo of the Day.
 
-Todas as funções recebem ``want_dark`` e tentam várias candidatas até
-encontrar uma com o tom pedido (verificação por luminância).
+Every function takes ``want_dark`` and tries several candidates until it
+finds one with the requested tone (checked by luminance).
 """
 
 from __future__ import annotations
@@ -23,10 +23,10 @@ _session: requests.Session | None = None
 
 
 def _http_get(url: str, **kwargs) -> requests.Response:
-    """GET com sessão partilhada, retries e backoff exponencial.
+    """GET with a shared session, retries and exponential backoff.
 
-    Erros transitórios (rede, 429, 5xx) são tentados de novo em vez de
-    deitar fora o ciclo inteiro da fonte.
+    Transient errors (network, 429, 5xx) are retried instead of aborting
+    the whole source cycle.
     """
     global _session
     if _session is None:
@@ -53,11 +53,11 @@ def download(url: str, timeout: int = 30) -> bytes:
 
 
 def _acceptable(data: bytes, want_dark: bool) -> bool:
-    """Imagem válida, com o tom pedido e que ainda não foi usada."""
+    """Valid image, with the requested tone, not used yet."""
     try:
         if not tone.tone_matches(tone.mean_luminance(data), want_dark):
             return False
-    except Exception:  # noqa: BLE001 - imagem inválida conta como não compatível
+    except Exception:  # noqa: BLE001 - invalid image counts as not matching
         return False
     return not history.is_duplicate(data)
 
@@ -66,7 +66,7 @@ def _acceptable(data: bytes, want_dark: bool) -> bool:
 # Unsplash
 # ---------------------------------------------------------------------------
 def fetch_unsplash(want_dark: bool) -> bytes:
-    """Foto aleatória do Unsplash com o tom pedido (usa a API key das settings)."""
+    """Random Unsplash photo with the requested tone (uses the settings key)."""
     key = config.get("unsplash_key") or ""
     if not key:
         raise RuntimeError(
@@ -99,7 +99,7 @@ def fetch_unsplash(want_dark: bool) -> bytes:
 
     results = search({"color": color})
     if not results:
-        # repete sem o filtro de cor; a verificação de luminância garante o tom
+        # retry without the colour filter; luminance checking guarantees the tone
         results = search({})
     if not results:
         raise RuntimeError(t("Sem resultados no Unsplash para: %s") % query)
@@ -121,7 +121,7 @@ def fetch_unsplash(want_dark: bool) -> bytes:
 # Bing Photo of the Day
 # ---------------------------------------------------------------------------
 def parse_bing_images(payload: dict) -> list[str]:
-    """Extrai os URLs das imagens do JSON do Bing."""
+    """Extract image URLs from the Bing JSON payload."""
     out = []
     for item in payload.get("images") or []:
         u = item.get("url")
@@ -131,7 +131,7 @@ def parse_bing_images(payload: dict) -> list[str]:
 
 
 def _bing_candidates(payload: dict) -> list[tuple[str | None, str]]:
-    """(thumbnail, imagem completa) de cada dia, com tamanhos adequados."""
+    """(thumbnail, full image) for each day, at suitable sizes."""
     out: list[tuple[str | None, str]] = []
     for item in payload.get("images") or []:
         base = item.get("urlbase")
@@ -149,7 +149,7 @@ def _bing_candidates(payload: dict) -> list[tuple[str | None, str]]:
 
 
 def fetch_bing(want_dark: bool = True) -> bytes:
-    """Foto do dia do Bing (sem API key), com variedade dos últimos dias."""
+    """Bing photo of the day (no API key), with variety from recent days."""
     r = _http_get(
         "https://www.bing.com/HPImageArchive.aspx",
         params={"format": "js", "idx": 0, "n": 8, "mkt": "pt-PT"},
@@ -164,7 +164,7 @@ def fetch_bing(want_dark: bool = True) -> bytes:
     random.shuffle(tail)
     for thumb, full in head + tail:
         try:
-            # primeiro o thumbnail (rápido) para verificar tom e repetição
+            # check the thumbnail first (fast) for tone and repetition
             if thumb and not _acceptable(download(thumb), want_dark):
                 continue
             try:
@@ -183,7 +183,7 @@ def fetch_bing(want_dark: bool = True) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# Wallhaven (sem API key; usa a API pública de pesquisa)
+# Wallhaven (no API key; uses the public search API)
 # ---------------------------------------------------------------------------
 def fetch_wallhaven(want_dark: bool = True) -> bytes:
     api = "https://wallhaven.cc/api/v1/search"

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Backend Linux: tema, wallpaper por ambiente de trabalho e autostart XDG."""
+"""Linux backend: theme, wallpaper per desktop environment and XDG autostart."""
 
 from __future__ import annotations
 
@@ -13,10 +13,10 @@ from .base import BasePlatform, run
 
 
 # ---------------------------------------------------------------------------
-# Parsers (funções puras, testáveis)
+# Parsers (pure, testable functions)
 # ---------------------------------------------------------------------------
 def parse_color_scheme(value: str) -> bool | None:
-    """'prefer-dark' -> False (não é claro), 'prefer-light' -> True, resto None."""
+    """'prefer-dark' -> False (not light), 'prefer-light' -> True, else None."""
     v = value.strip().strip("'\"")
     if v == "prefer-dark":
         return False
@@ -26,7 +26,7 @@ def parse_color_scheme(value: str) -> bool | None:
 
 
 def parse_gtk_theme(value: str) -> bool | None:
-    """Nome do tema GTK -> True se claro."""
+    """GTK theme name -> True if light."""
     v = value.strip().strip("'\"")
     if not v:
         return None
@@ -34,7 +34,7 @@ def parse_gtk_theme(value: str) -> bool | None:
 
 
 def parse_kde_colorscheme(text: str) -> bool | None:
-    """Conteúdo do kdeglobals -> True se claro."""
+    """kdeglobals contents -> True if light."""
     for line in text.splitlines():
         if line.strip().startswith("ColorScheme="):
             scheme = line.split("=", 1)[1].strip().lower()
@@ -58,7 +58,7 @@ def autostart_path() -> Path:
 class Platform(BasePlatform):
     name = "Linux"
 
-    # -- tema ---------------------------------------------------------
+    # -- theme ---------------------------------------------------------
     def is_light_theme(self) -> bool:
         cs = _gsettings_get("org.gnome.desktop.interface", "color-scheme")
         if cs is not None:
@@ -112,7 +112,7 @@ class Platform(BasePlatform):
                 ],
             ):
                 return False
-            # melhor esforço para o modo escuro (chave pode não existir)
+            # best effort for dark mode (the key may not exist)
             run(
                 [
                     "gsettings",
@@ -192,14 +192,14 @@ class Platform(BasePlatform):
         elif any(k in de for k in ("gnome", "unity", "pop")):
             ordered = [set_gnome, set_feh]
         else:
-            # ambiente desconhecido: tenta genéricos
+            # unknown environment: try the generic methods
             ordered = [set_gnome, set_cinnamon, set_mate, set_kde, set_xfce, set_feh]
 
         for fn in ordered:
             try:
                 if fn():
                     return
-            except Exception as e:  # noqa: BLE001 - continua para o próximo método
+            except Exception as e:  # noqa: BLE001 - try the next method
                 errors.append("%s: %r" % (fn.__name__, e))
 
         raise RuntimeError(
@@ -210,7 +210,7 @@ class Platform(BasePlatform):
             % (de, " | ".join(errors[-3:]))
         )
 
-    # -- arranque com o sistema ----------------------------------------
+    # -- startup with the system ---------------------------------------
     def startup_enabled(self) -> bool:
         return autostart_path().exists()
 
@@ -228,7 +228,7 @@ class Platform(BasePlatform):
                     "[Desktop Entry]\n"
                     "Type=Application\n"
                     "Name=WallpaperChanger\n"
-                    "Comment=Wallpapers automáticos escuros/claros\n"
+                    "Comment=Automatic dark/light wallpapers\n"
                     "Exec=%s\n"
                     "Terminal=false\n"
                     "X-GNOME-Autostart-enabled=true\n" % exec_cmd
@@ -243,6 +243,6 @@ class Platform(BasePlatform):
         except OSError:
             return False
 
-    # -- diversos -------------------------------------------------------
+    # -- misc ----------------------------------------------------------
     def open_folder(self, path: Path) -> None:
         run(["xdg-open", str(path)])

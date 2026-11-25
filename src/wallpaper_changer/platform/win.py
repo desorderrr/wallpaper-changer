@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Backend Windows: tema, wallpaper, arranque automático."""
+"""Windows backend: theme, wallpaper, startup."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def _read_dword(key, name: str) -> int | None:
 class Platform(BasePlatform):
     name = "Windows"
 
-    # -- tema ---------------------------------------------------------
+    # -- theme --------------------------------------------------------
     def is_light_theme(self) -> bool:
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, PERSONALIZE_KEY) as k:
@@ -53,7 +53,7 @@ class Platform(BasePlatform):
         if not ok:
             raise OSError(t("SystemParametersInfoW falhou"))
 
-    # -- arranque com o Windows ----------------------------------------
+    # -- startup with Windows ------------------------------------------
     def startup_enabled(self) -> bool:
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as k:
@@ -67,7 +67,7 @@ class Platform(BasePlatform):
 
         try:
             if enable:
-                # CreateKeyEx porque em perfis novos a chave Run pode não existir
+                # CreateKeyEx: on fresh profiles the Run key may not exist
                 with winreg.CreateKeyEx(
                     winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE
                 ) as k:
@@ -85,6 +85,6 @@ class Platform(BasePlatform):
         except OSError:
             return False
 
-    # -- diversos -------------------------------------------------------
+    # -- misc ----------------------------------------------------------
     def open_folder(self, path: Path) -> None:
         os.startfile(str(path))  # noqa: S606

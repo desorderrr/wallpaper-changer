@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Histórico de wallpapers já usados (para nunca repetir).
+"""History of used wallpapers (so they are never repeated).
 
-Guarda um hash exato (sha256) e um hash percetual (aHash 8x8) de cada
-imagem aplicada. O aHash apanha a mesma foto mesmo que seja recomprimida
-ou redimensionada.
+Stores an exact hash (sha256) and a perceptual hash (8x8 aHash) of every
+applied image. The aHash catches the same photo even when recompressed
+or resized.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from PIL import Image
 from . import config
 
 MAX_ITEMS = 500
-HAMMING_MAX = 2  # distância máxima no aHash para considerar "a mesma imagem"
+HAMMING_MAX = 2  # max aHash distance to consider "the same image"
 
 _lock = threading.RLock()
 _items: list[dict] | None = None
@@ -64,7 +64,7 @@ def _sha(data: bytes) -> str:
 
 
 def _fingerprint(data: bytes) -> tuple[str, int]:
-    """(aHash 8x8, luminância média) — juntos identificam a imagem."""
+    """(8x8 aHash, mean luminance) — together they identify the image."""
     img = Image.open(io.BytesIO(data)).convert("L").resize((8, 8))
     if hasattr(img, "get_flattened_data"):
         pixels = list(img.get_flattened_data())
@@ -78,7 +78,7 @@ def _fingerprint(data: bytes) -> tuple[str, int]:
 
 
 def ahash(data: bytes) -> str:
-    """Hash percetual 8x8 (64 bits em hex)."""
+    """8x8 perceptual hash (64 bits in hex)."""
     return _fingerprint(data)[0]
 
 
@@ -105,7 +105,7 @@ def _similar(ahash_a: str, ahash_b: str) -> bool:
 
 
 def is_duplicate(data: bytes) -> bool:
-    """True se esta imagem (bytes) já foi usada."""
+    """True if this image (bytes) was already used."""
     try:
         sha = _sha(data)
         ah, luma = _fingerprint(data)
@@ -119,7 +119,7 @@ def is_duplicate(data: bytes) -> bool:
             if not isinstance(other, str) or not _similar(ah, other):
                 continue
             other_luma = item.get("luma")
-            # a luminância evita falsos positivos em imagens "lisas"
+            # luminance avoids false positives on "flat" images
             if other_luma is None or abs(luma - int(other_luma)) <= 12:
                 return True
     return False
@@ -139,7 +139,7 @@ def _build_item(data: bytes, source: str, path=None) -> dict:
 
 
 def add(data: bytes, source: str, path=None) -> None:
-    """Regista uma imagem como usada."""
+    """Record an image as used."""
     try:
         item = _build_item(data, source, path)
     except (OSError, ValueError):
@@ -159,7 +159,7 @@ def add_path(path, source: str) -> None:
 
 
 def reset() -> None:
-    """Esquece o histórico (permite voltar a usar as mesmas imagens)."""
+    """Forget the history (allows reusing the same images)."""
     global _items
     with _lock:
         _items = []
@@ -177,7 +177,7 @@ def count() -> int:
 
 
 def seed_from_folder() -> int:
-    """Na primeira execução, marca as imagens já guardadas como usadas."""
+    """On first run, mark already saved images as used."""
     with _lock:
         if _load():
             return 0

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Utilitário de desenvolvimento: captura a janela de definições."""
+"""Dev utility: capture the settings window."""
 
 import ctypes
 import ctypes.wintypes as wt
@@ -9,7 +9,7 @@ from pathlib import Path
 
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
-except Exception:  # noqa: BLE001 - DPI awareness é opcional neste script
+except Exception:  # noqa: BLE001 - DPI awareness is optional in this script
     pass
 
 import customtkinter as ctk
@@ -19,7 +19,7 @@ from wallpaper_changer import config
 from wallpaper_changer.app import open_image_folder, status_text
 from wallpaper_changer.ui import SettingsWindow
 
-# --- declarações Win32 com tipos corretos (64-bit) ------------------------
+# --- Win32 declarations with correct types (64-bit) -----------------------
 user32 = ctypes.windll.user32
 gdi32 = ctypes.windll.gdi32
 user32.GetWindowDC.restype = wt.HDC
@@ -99,7 +99,7 @@ def grab_window(hwnd: int) -> Image.Image:
 
 def main() -> None:
     config.load_settings()
-    # Nunca capturar chaves reais para imagens do repositório
+    # Never capture real keys for repository screenshots
     config._settings["unsplash_key"] = "exemplo-chave-falsa-000000000000"
     light = bool(os.environ.get("WPC_SHOT_LIGHT"))
     if light:
@@ -143,7 +143,7 @@ def main() -> None:
             time.sleep(0.05)
         img = grab_window(int(win.wm_frame(), 16))
         img.save(filename)
-        print("gravado", filename, img.size)
+        print("saved", filename, img.size)
 
     win.destroy()
     root.destroy()

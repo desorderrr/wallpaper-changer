@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Permite `python -m wallpaper_changer`."""
+"""Allows ``python -m wallpaper_changer``."""
 
 from .app import main
 

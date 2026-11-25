@@ -164,7 +164,7 @@ def test_obtain_candidate_skips_duplicates(bing_only, monkeypatch):
     ok1, _, path1 = app.obtain_candidate()
     assert ok1 and path1
 
-    # marca a imagem como já usada e pede nova sugestão
+    # mark the image as used and request another suggestion
     app.history.add(data, "bing")
     ok2, msg2, path2 = app.obtain_candidate()
     assert not ok2 and path2 is None
@@ -177,7 +177,7 @@ def test_failed_apply_removes_orphan_file(bing_only, monkeypatch):
     )
 
     def fail(_path):
-        raise OSError("falhou ao aplicar")
+        raise OSError("failed to apply")
 
     monkeypatch.setattr(app.platform, "set_wallpaper", fail)
     ok, _msg = app.change_wallpaper()

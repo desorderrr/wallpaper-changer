@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Testes do sistema de traduções."""
+"""Tests for the translation system."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from wallpaper_changer import config, i18n
 
 @pytest.fixture(autouse=True)
 def restore_language():
-    """Nenhum teste pode deixar a app noutro idioma."""
+    """No test may leave the app in another language."""
     previous = i18n.current_language()
     yield
     i18n.set_language(previous)
@@ -47,7 +47,7 @@ def test_unknown_language_does_not_change_anything():
 
 
 def test_detect_from_environment(monkeypatch):
-    # força o ramo POSIX mesmo a correr em Windows
+    # force the POSIX branch even when running on Windows
     monkeypatch.setattr(i18n, "sys", types.SimpleNamespace(platform="linux"))
     for var in ("LANGUAGE", "LC_ALL", "LC_MESSAGES"):
         monkeypatch.setenv(var, "")
@@ -89,7 +89,7 @@ def test_interval_labels_are_translated(data_dir):
 
 
 def test_every_translatable_string_has_an_english_version():
-    """Nenhuma chamada t("...") pode ficar sem entrada no catálogo inglês."""
+    """No t("...") call may be missing from the English catalog."""
     root = Path(__file__).resolve().parents[1] / "src"
     keys: list[str] = []
     for path in sorted(root.rglob("*.py")):
@@ -104,6 +104,6 @@ def test_every_translatable_string_has_an_english_version():
                 and isinstance(node.args[0].value, str)
             ):
                 keys.append(node.args[0].value)
-    assert keys, "nenhuma string traduzível encontrada"
+    assert keys, "no translatable strings found"
     missing = sorted(set(keys) - set(i18n.CATALOGS["en"]))
     assert not missing, "traduções em falta: %r" % missing

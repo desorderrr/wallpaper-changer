@@ -1,5 +1,5 @@
 @echo off
-REM Compila o WallpaperChanger para Windows (exe standalone)
+REM Build WallpaperChanger for Windows (standalone exe)
 cd /d "%~dp0.."
 pip install -e ".[dev]"
 python scripts\make_icon.py
@@ -9,9 +9,9 @@ python -m PyInstaller --noconfirm --onefile --windowed ^
   --collect-all customtkinter --paths src scripts\launcher.py
 if exist "dist\WallpaperChanger.exe" (
     echo.
-    echo OK: dist\WallpaperChanger.exe criado.
+    echo OK: dist\WallpaperChanger.exe created.
 ) else (
     echo.
-    echo ERRO: a compilacao falhou.
+    echo ERROR: the build failed.
 )
 pause

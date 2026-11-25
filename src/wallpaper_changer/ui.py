@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Janela de definições moderna (customtkinter), com pré-visualização."""
+"""Modern settings window (customtkinter) with preview."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ THEME_OPTIONS = [
 
 
 def theme_options() -> list[tuple[str, str]]:
-    """Pares (id, rótulo traduzido) do tom dos wallpapers."""
+    """(id, translated label) pairs for the wallpaper tone."""
     return [(value, t(label)) for value, label in THEME_OPTIONS]
 
 
@@ -45,7 +45,7 @@ def _source_from_path(path: Path) -> str:
 
 
 class SettingsWindow(ctk.CTkToplevel):
-    """Janela com quatro separadores: Geral, Pré-visualizar, Pesquisas e Sobre."""
+    """Window with four tabs: General, Preview, Queries and About."""
 
     def __init__(
         self,
@@ -78,7 +78,7 @@ class SettingsWindow(ctk.CTkToplevel):
         self._gallery_loading = False
         self._gallery_select: str | None = None
 
-        # nomes dos separadores no idioma atual (usados em _build_* e no poll)
+        # tab names in the active language (used in _build_* and in poll)
         self._tab_names = {
             key: t(label)
             for key, label in (
@@ -95,7 +95,7 @@ class SettingsWindow(ctk.CTkToplevel):
 
         self.grid_columnconfigure(0, weight=1)
 
-        # --- Cabeçalho --------------------------------------------------
+        # --- Header -----------------------------------------------------
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=20, pady=(16, 4))
 
@@ -122,7 +122,7 @@ class SettingsWindow(ctk.CTkToplevel):
         )
         self.header_status.pack(anchor="w", fill="x")
 
-        # --- Separadores -------------------------------------------------
+        # --- Tabs -------------------------------------------------------
         self.tabs = ctk.CTkTabview(self, width=720, height=500)
         self.tabs.grid(row=1, column=0, sticky="nsew", padx=20, pady=8)
         for name in self._tab_names.values():
@@ -135,7 +135,7 @@ class SettingsWindow(ctk.CTkToplevel):
             self.tabs.tab(self._tab_names["about"]), open_folder, forget_history
         )
 
-        # --- Rodapé -------------------------------------------------------
+        # --- Footer -----------------------------------------------------
         footer = ctk.CTkFrame(self, fg_color="transparent")
         footer.grid(row=2, column=0, sticky="ew", padx=20, pady=(4, 16))
 
@@ -176,12 +176,12 @@ class SettingsWindow(ctk.CTkToplevel):
         self.after(300, self._poll)
 
     # ------------------------------------------------------------------
-    # Construção dos separadores
+    # Building the tabs
     # ------------------------------------------------------------------
     def _build_general(self, tab) -> None:
         tab.grid_columnconfigure(0, weight=1)
 
-        # Fontes
+        # Sources
         box = ctk.CTkFrame(tab)
         box.grid(row=0, column=0, sticky="ew", pady=(8, 6), padx=4)
         box.grid_columnconfigure(0, weight=1)
@@ -232,7 +232,7 @@ class SettingsWindow(ctk.CTkToplevel):
             font=ctk.CTkFont(size=11),
         ).grid(row=4, column=0, sticky="w", padx=12, pady=(2, 10))
 
-        # Tom
+        # Tone
         box2 = ctk.CTkFrame(tab)
         box2.grid(row=1, column=0, sticky="ew", pady=6, padx=4)
         ctk.CTkLabel(
@@ -253,7 +253,7 @@ class SettingsWindow(ctk.CTkToplevel):
         )
         self.theme_seg.grid(row=1, column=0, sticky="w", padx=12, pady=(0, 12))
 
-        # Intervalo + opções
+        # Interval + options
         box3 = ctk.CTkFrame(tab)
         box3.grid(row=2, column=0, sticky="ew", pady=6, padx=4)
         box3.grid_columnconfigure(0, weight=1)
@@ -306,7 +306,7 @@ class SettingsWindow(ctk.CTkToplevel):
         )
         ctk.CTkLabel(keep_row, text=t("imagens")).pack(side="left")
 
-        # Idioma
+        # Language
         self._build_language_row(box3)
 
     def _build_language_row(self, parent) -> None:
@@ -402,7 +402,7 @@ class SettingsWindow(ctk.CTkToplevel):
         )
         self.preview_status.pack(side="left", padx=6, fill="x", expand=True)
 
-        # primeira carga da galeria
+        # first gallery load
         self.after(250, self._refresh_gallery)
 
     def _build_queries(self, tab) -> None:
@@ -487,10 +487,10 @@ class SettingsWindow(ctk.CTkToplevel):
         ).pack(side="left", padx=8)
 
     # ------------------------------------------------------------------
-    # Pré-visualização
+    # Preview
     # ------------------------------------------------------------------
     def _refresh_gallery(self, select: str | None = None) -> None:
-        """Recarrega a galeria; o hashing das imagens corre num worker."""
+        """Reload the gallery; image hashing runs in a worker."""
         if select is not None:
             self._gallery_select = select
         if self._gallery_loading:
@@ -501,7 +501,7 @@ class SettingsWindow(ctk.CTkToplevel):
     def _gallery_worker(self) -> None:
         try:
             paths = [str(p) for p in self._recent()]
-        except Exception:  # noqa: BLE001 - a galeria nunca deve rebentar a UI
+        except Exception:  # noqa: BLE001 - the gallery must never break the UI
             paths = []
         self._status_q.put(("gallery", True, "", paths))
 
@@ -532,7 +532,7 @@ class SettingsWindow(ctk.CTkToplevel):
                     tile_img = ctk.CTkImage(
                         light_image=img, dark_image=img, size=img.size
                     )
-            except Exception:  # noqa: BLE001 - ficheiro inválido: ignora
+            except Exception:  # noqa: BLE001 - invalid file: skip it
                 continue
             self._gallery_thumbs.append(tile_img)
             btn = ctk.CTkButton(
@@ -622,7 +622,7 @@ class SettingsWindow(ctk.CTkToplevel):
         self._status_q.put(("applied", ok, msg, path))
 
     # ------------------------------------------------------------------
-    # Ações gerais
+    # General actions
     # ------------------------------------------------------------------
     def _center(self) -> None:
         self.update_idletasks()
@@ -698,7 +698,7 @@ class SettingsWindow(ctk.CTkToplevel):
                     self._rebuild_gallery(extra)
                 try:
                     self.header_status.configure(text=self._header_text())
-                except Exception:  # noqa: BLE001 - a janela pode ter fechado
+                except Exception:  # noqa: BLE001 - the window may have closed
                     pass
         except queue.Empty:
             pass
@@ -710,7 +710,7 @@ class SettingsWindow(ctk.CTkToplevel):
     def _header_text(self) -> str:
         try:
             return self._header_provider()
-        except Exception:  # noqa: BLE001 - o cabeçalho é informativo
+        except Exception:  # noqa: BLE001 - the header is informational
             return ""
 
     def set_header_provider(self, provider: Callable[[], str]) -> None:

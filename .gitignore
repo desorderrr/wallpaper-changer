@@ -8,18 +8,19 @@ dist/
 .pytest_cache/
 .coverage
 
-# Ambientes
+# Environments
+
 .venv/
 venv/
 .venv*/
 
-# Artefactos gerados
+# Generated artifacts
 icon.ico
 icon.png
 icon.icns
 Icon?
 *.log
 
-# Sistema
+# System
 .DS_Store
 Thumbs.db

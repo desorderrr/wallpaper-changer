@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Seleção automática do backend do sistema operativo."""
+"""Automatic selection of the operating-system backend."""
 
 from __future__ import annotations
 

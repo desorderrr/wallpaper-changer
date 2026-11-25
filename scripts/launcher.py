@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Ponto de entrada para o PyInstaller."""
+"""Entry point for PyInstaller."""
 
 from wallpaper_changer.app import main
 

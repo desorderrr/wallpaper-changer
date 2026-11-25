@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compila o WallpaperChanger para Linux (binário único)
+# Build WallpaperChanger for Linux (single binary)
 set -e
 cd "$(dirname "$0")/.."
 pip install -e ".[dev]"

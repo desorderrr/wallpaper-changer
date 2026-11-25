@@ -13,18 +13,18 @@ def test_platform_selection():
 def test_theme_is_light_prefers_apps_mode():
     from wallpaper_changer.platform.base import theme_is_light
 
-    # "modo das aplicações" tem prioridade sobre o "modo do Windows"
+    # "app mode" takes priority over "Windows mode"
     assert theme_is_light(1, 0) is True
     assert theme_is_light(0, 1) is False
     assert theme_is_light(1, 1) is True
     assert theme_is_light(0, 0) is False
-    # fallback quando a chave das apps não existe
+    # fallback when the apps key is missing
     assert theme_is_light(None, 1) is True
     assert theme_is_light(None, 0) is False
     assert theme_is_light(None, None) is True
 
 
-# --- Linux (funções puras) ------------------------------------------------
+# --- Linux (pure functions) ------------------------------------------------
 def test_parse_color_scheme():
     from wallpaper_changer.platform.linux import parse_color_scheme
 
@@ -49,8 +49,8 @@ def test_parse_kde_colorscheme():
     assert parse_kde_colorscheme("[General]\n") is None
 
 
-# --- macOS (função pura) --------------------------------------------------
-@pytest.mark.skipif(sys.platform != "darwin", reason="só macOS")
+# --- macOS (pure function) --------------------------------------------------
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS only")
 def test_macos_parse_defaults():
     from wallpaper_changer.platform.macos import parse_defaults
 
@@ -58,13 +58,13 @@ def test_macos_parse_defaults():
     assert parse_defaults("", 1) is True
 
 
-# --- Windows (registo real, só leitura) -----------------------------------
-@pytest.mark.skipif(sys.platform != "win32", reason="só Windows")
+# --- Windows (real registry, read-only) -----------------------------------
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
 def test_windows_theme_bool():
     assert isinstance(platform_mod.platform.is_light_theme(), bool)
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="só Windows")
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
 def test_windows_startup_roundtrip():
     p = platform_mod.platform
     was = p.startup_enabled()

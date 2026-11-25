@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Gera os ícones de empacotamento (ico/png e icns no macOS)."""
+"""Generate packaging icons (ico/png, plus icns on macOS)."""
 
 import subprocess
 import sys
@@ -32,7 +32,7 @@ def main() -> None:
         ROOT / "icon.ico",
         sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
     )
-    print("icon.ico e icon.png criados")
+    print("icon.ico and icon.png created")
 
     if sys.platform == "darwin":
         iconset = ROOT / "icon.iconset"
@@ -47,9 +47,9 @@ def main() -> None:
                 ["iconutil", "-c", "icns", str(iconset), "-o", str(ROOT / "icon.icns")],
                 check=True,
             )
-            print("icon.icns criado")
+            print("icon.icns created")
         except (OSError, subprocess.CalledProcessError) as e:
-            print("aviso: não foi possível criar icon.icns:", e)
+            print("warning: could not create icon.icns:", e)
 
 
 if __name__ == "__main__":

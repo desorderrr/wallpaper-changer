@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Traduções da interface (português como base, inglês disponível).
+"""UI translations (Portuguese as the source, English available).
 
-As strings em português são as chaves do catálogo: quando o idioma ativo
-é o português (ou a chave não existe), devolve-se o próprio texto. Sem
-ficheiros .mo — o catálogo vive aqui e é empacotado sem configuração extra.
+Portuguese strings are the catalog keys: when the active language is
+Portuguese (or a key is missing), the source text is returned. No .mo
+files — the catalog lives here and is packaged without extra config.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ LANGUAGES = ("pt", "en")
 CATALOGS: dict[str, dict[str, str]] = {
     "pt": {},
     "en": {
-        # --- estado / tema -------------------------------------------------
+        # --- state / theme -------------------------------------------------
         "escuro": "dark",
         "claro": "light",
         "segue o sistema": "follows the system",
@@ -27,7 +27,7 @@ CATALOGS: dict[str, dict[str, str]] = {
         "mudanças automáticas em pausa": "automatic changes paused",
         "última fonte: %s": "last source: %s",
         "última troca: %s": "last change: %s",
-        # --- troca de wallpaper -------------------------------------------
+        # --- wallpaper change ---------------------------------------------
         "Já existe uma troca de wallpaper em curso.": "A wallpaper change is already in progress.",
         "Mudanças automáticas em pausa.": "Automatic changes are paused.",
         "Nenhuma fonte ativa. Ativa o Unsplash, o Bing ou o Wallhaven.": "No source is enabled. Enable Unsplash, Bing or Wallhaven.",
@@ -38,12 +38,12 @@ CATALOGS: dict[str, dict[str, str]] = {
         "Wallpaper aplicado.": "Wallpaper applied.",
         "Não consegui aplicar o wallpaper: %s": "Could not apply the wallpaper: %s",
         "Não consegui alterar o arranque automático do sistema.": "Could not change the system startup setting.",
-        # --- sugestões (pré-visualização) ---------------------------------
+        # --- suggestions (preview) ----------------------------------------
         "%s: tom errado": "%s: wrong tone",
         "%s: wallpaper já usado": "%s: wallpaper already used",
         "Sugestão do %s (tom %s).": "Suggestion from %s (%s tone).",
         "Não consegui obter uma sugestão. %s": "Could not get a suggestion. %s",
-        # --- bandeja (menu e notificações) --------------------------------
+        # --- tray (menu and notifications) --------------------------------
         "Mudar agora": "Change now",
         "Pausar mudanças automáticas": "Pause automatic changes",
         "Intervalo": "Interval",
@@ -74,7 +74,7 @@ CATALOGS: dict[str, dict[str, str]] = {
         "python-xlib (pip) ou python3-gi + gir1.2-gtk-3.0.": "Could not start the system tray. On Linux install python-xlib "
         "(pip) or python3-gi + gir1.2-gtk-3.0.",
         "Não consegui iniciar a bandeja do sistema: %s": "Could not start the system tray: %s",
-        # --- intervalos ----------------------------------------------------
+        # --- intervals -----------------------------------------------------
         "Apenas ao iniciar": "Only at startup",
         "Cada 5 minutos": "Every 5 minutes",
         "Cada 10 minutos": "Every 10 minutes",
@@ -86,7 +86,7 @@ CATALOGS: dict[str, dict[str, str]] = {
         "Cada 6 horas": "Every 6 hours",
         "Cada 12 horas": "Every 12 hours",
         "Diário": "Daily",
-        # --- janela de definições -----------------------------------------
+        # --- settings window ----------------------------------------------
         "WallpaperChanger — Definições": "WallpaperChanger — Settings",
         "Geral": "General",
         "Pré-visualizar": "Preview",
@@ -146,7 +146,7 @@ CATALOGS: dict[str, dict[str, str]] = {
         "Used wallpapers are kept in a history — the app never "
         "repeats an image (you can forget the history below).\n\n"
         "Platforms: Windows 11, macOS and Linux.",
-        # --- fontes de imagens --------------------------------------------
+        # --- image sources -------------------------------------------------
         "Sem API key do Unsplash (gratuita em unsplash.com/developers)": "No Unsplash API key (free at unsplash.com/developers)",
         "API key do Unsplash inválida": "Invalid Unsplash API key",
         "Limite de pedidos do Unsplash excedido": "Unsplash request limit exceeded",
@@ -156,7 +156,7 @@ CATALOGS: dict[str, dict[str, str]] = {
         "Bing não devolveu imagens": "Bing returned no images",
         "Bing não tem imagens novas desse tom nos últimos dias": "Bing has no new images with that tone in the last few days",
         "Wallhaven não devolveu imagens novas com o tom pedido": "Wallhaven returned no new images with the requested tone",
-        # --- plataforma ---------------------------------------------------
+        # --- platform -----------------------------------------------------
         "Não consegui definir o wallpaper neste ambiente "
         "(XDG_CURRENT_DESKTOP=%r). %s": "Could not set the wallpaper in this environment "
         "(XDG_CURRENT_DESKTOP=%r). %s",
@@ -169,12 +169,12 @@ _current = "pt"
 
 
 def t(text: str) -> str:
-    """Traduz uma string de interface para o idioma atual."""
+    """Translate a UI string into the active language."""
     return CATALOGS.get(_current, {}).get(text, text)
 
 
 def set_language(lang: str) -> None:
-    """Escolhe o idioma ativo (valores em LANGUAGES)."""
+    """Set the active language (values from LANGUAGES)."""
     global _current
     if lang in CATALOGS:
         _current = lang
@@ -185,14 +185,14 @@ def current_language() -> str:
 
 
 def detect_system_language() -> str:
-    """Idioma da interface do sistema: 'pt' se português, senão 'en'."""
+    """System UI language: 'pt' for Portuguese, otherwise 'en'."""
     if sys.platform == "win32":
         try:
             langid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
             if langid & 0x3FF == 0x16:  # LANG_PORTUGUESE
                 return "pt"
             return "en"
-        except Exception:  # noqa: BLE001 - a deteção é best-effort
+        except Exception:  # noqa: BLE001 - detection is best-effort
             pass
     for var in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
         val = os.environ.get(var) or ""
@@ -203,8 +203,8 @@ def detect_system_language() -> str:
 
 
 def apply_language() -> None:
-    """Aplica o idioma das settings (auto -> deteta o do sistema)."""
-    from . import config  # import local para evitar ciclo
+    """Apply the language from settings (auto -> detect the system one)."""
+    from . import config  # local import to avoid a cycle
 
     mode = config.get("language") or "auto"
     set_language(detect_system_language() if mode == "auto" else mode)

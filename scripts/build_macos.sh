@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compila o WallpaperChanger para macOS (.app)
+# Build WallpaperChanger for macOS (.app)
 set -e
 cd "$(dirname "$0")/.."
 pip install -e ".[dev]"
