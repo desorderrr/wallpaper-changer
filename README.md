@@ -51,7 +51,7 @@ window.
 
 | Preview | Queries | About |
 |---|---|---|
-| ![Preview](docs/screenshot-preview.png) | ![Queries](docs/screenshot-pesquisas.png) | ![About](docs/screenshot-sobre.png) |
+| ![Preview](docs/screenshot-preview.png) | ![Queries](docs/screenshot-queries.png) | ![About](docs/screenshot-about.png) |
 
 ## Installation
 

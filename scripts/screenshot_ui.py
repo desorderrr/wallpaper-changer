@@ -15,8 +15,9 @@ except Exception:  # noqa: BLE001 - DPI awareness is optional in this script
 import customtkinter as ctk
 from PIL import Image
 
-from wallpaper_changer import config
+from wallpaper_changer import config, i18n
 from wallpaper_changer.app import open_image_folder, status_text
+from wallpaper_changer.i18n import t
 from wallpaper_changer.ui import SettingsWindow
 
 # --- Win32 declarations with correct types (64-bit) -----------------------
@@ -100,7 +101,10 @@ def grab_window(hwnd: int) -> Image.Image:
 def main() -> None:
     config.load_settings()
     # Never capture real keys for repository screenshots
-    config._settings["unsplash_key"] = "exemplo-chave-falsa-000000000000"
+    config._settings["unsplash_key"] = "example-fake-key-000000000000"
+    # The repository is in English, so screenshots default to the English UI;
+    # WPC_SHOT_LANG=pt regenerates the Portuguese ones.
+    i18n.set_language(os.environ.get("WPC_SHOT_LANG", "en"))
     light = bool(os.environ.get("WPC_SHOT_LIGHT"))
     if light:
         ctk.set_appearance_mode("light")
@@ -132,10 +136,10 @@ def main() -> None:
         time.sleep(0.1)
 
     for tab, filename in (
-        ("Geral", "docs/screenshot%s.png" % suffix),
-        ("Pré-visualizar", "docs/screenshot-preview%s.png" % suffix),
-        ("Pesquisas", "docs/screenshot-pesquisas%s.png" % suffix),
-        ("Sobre", "docs/screenshot-sobre%s.png" % suffix),
+        (t("Geral"), "docs/screenshot%s.png" % suffix),
+        (t("Pré-visualizar"), "docs/screenshot-preview%s.png" % suffix),
+        (t("Pesquisas"), "docs/screenshot-queries%s.png" % suffix),
+        (t("Sobre"), "docs/screenshot-about%s.png" % suffix),
     ):
         win.tabs.set(tab)
         for _ in range(8):

@@ -22,6 +22,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `.gitignore` comments, `pyproject.toml` metadata and ruff comments, all
   module/function docstrings and inline comments, log messages, build scripts
   and test messages. Commit messages and the changelog were already in English.
+- **The GitHub project page is in English too**: repository description,
+  topics and website link; release notes rewritten in English; all eight
+  documentation screenshots regenerated with the English UI (and renamed to
+  English filenames). `WPC_SHOT_LANG=pt` still regenerates Portuguese shots.
 - The Portuguese UI strings remain in the code on purpose: they are the
   source locale of the `pt`/`en` translation catalog.
 
