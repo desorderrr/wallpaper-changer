@@ -9,6 +9,7 @@ import subprocess
 import winreg
 from pathlib import Path
 
+from ..i18n import t
 from .base import BasePlatform, theme_is_light
 
 PERSONALIZE_KEY = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
@@ -50,7 +51,7 @@ class Platform(BasePlatform):
             SPIF_UPDATEINIFILE | SPIF_SENDCHANGE,
         )
         if not ok:
-            raise OSError("SystemParametersInfoW falhou")
+            raise OSError(t("SystemParametersInfoW falhou"))
 
     # -- arranque com o Windows ----------------------------------------
     def startup_enabled(self) -> bool:

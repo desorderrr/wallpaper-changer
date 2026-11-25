@@ -14,6 +14,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from . import config, history, tone
+from .i18n import t
 
 UA = {"User-Agent": config.APP_NAME}
 MAX_TONE_TRIES = 6
@@ -69,7 +70,7 @@ def fetch_unsplash(want_dark: bool) -> bytes:
     key = config.get("unsplash_key") or ""
     if not key:
         raise RuntimeError(
-            "Sem API key do Unsplash (gratuita em unsplash.com/developers)"
+            t("Sem API key do Unsplash (gratuita em unsplash.com/developers)")
         )
 
     queries = config.get("queries_dark") if want_dark else config.get("queries_light")
@@ -90,9 +91,9 @@ def fetch_unsplash(want_dark: bool) -> bytes:
             timeout=20,
         )
         if r.status_code == 401:
-            raise RuntimeError("API key do Unsplash inválida")
+            raise RuntimeError(t("API key do Unsplash inválida"))
         if r.status_code == 403:
-            raise RuntimeError("Limite de pedidos do Unsplash excedido")
+            raise RuntimeError(t("Limite de pedidos do Unsplash excedido"))
         r.raise_for_status()
         return r.json().get("results") or []
 
@@ -101,7 +102,7 @@ def fetch_unsplash(want_dark: bool) -> bytes:
         # repete sem o filtro de cor; a verificação de luminância garante o tom
         results = search({})
     if not results:
-        raise RuntimeError("Sem resultados no Unsplash para: %s" % query)
+        raise RuntimeError(t("Sem resultados no Unsplash para: %s") % query)
 
     random.shuffle(results)
     for photo in results[:MAX_TONE_TRIES]:
@@ -112,7 +113,7 @@ def fetch_unsplash(want_dark: bool) -> bytes:
         if _acceptable(data, want_dark):
             return data
     raise RuntimeError(
-        "Unsplash não devolveu fotos novas com o tom pedido; tenta de novo"
+        t("Unsplash não devolveu fotos novas com o tom pedido; tenta de novo")
     )
 
 
@@ -157,7 +158,7 @@ def fetch_bing(want_dark: bool = True) -> bytes:
     r.raise_for_status()
     entries = _bing_candidates(r.json())
     if not entries:
-        raise RuntimeError("Bing não devolveu imagens")
+        raise RuntimeError(t("Bing não devolveu imagens"))
 
     head, tail = entries[:1], entries[1:]
     random.shuffle(tail)
@@ -178,7 +179,7 @@ def fetch_bing(want_dark: bool = True) -> bytes:
             continue
         if _acceptable(data, want_dark):
             return data
-    raise RuntimeError("Bing não tem imagens novas desse tom nos últimos dias")
+    raise RuntimeError(t("Bing não tem imagens novas desse tom nos últimos dias"))
 
 
 # ---------------------------------------------------------------------------
@@ -216,4 +217,4 @@ def fetch_wallhaven(want_dark: bool = True) -> bytes:
                 continue
             if _acceptable(image, want_dark):
                 return image
-    raise RuntimeError("Wallhaven não devolveu imagens novas com o tom pedido")
+    raise RuntimeError(t("Wallhaven não devolveu imagens novas com o tom pedido"))

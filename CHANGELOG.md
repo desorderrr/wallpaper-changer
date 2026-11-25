@@ -1,47 +1,89 @@
 # Changelog
 
-Todas as alterações relevantes deste projeto ficam registadas aqui.
-O formato segue [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/)
-e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+All notable changes to this project are documented here.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+and the project uses [Semantic Versioning](https://semver.org/).
+
+> From 2.4.0 onwards the changelog and commit messages are written in English.
+> The README and the app's Portuguese locale remain in Portuguese.
+
+## [2.4.0] — 2026-11-25
+
+### Added
+
+- **English interface**: the app now ships with Portuguese (source) and English
+  locales. The system language is detected automatically (Windows UI language
+  or `LANG`/`LC_*` on macOS/Linux) and can be overridden in
+  **Settings → General → Language** (`auto` / `pt` / `en`). Tray menus,
+  notifications, dialogs and error messages are translated too.
+- Lightweight in-code i18n (`i18n.py`): no `.mo`/gettext tooling or extra data
+  files, so PyInstaller builds need no changes.
+- New setting `language` with validation and migration of unknown values.
+- The tray menu is rebuilt in the new language as soon as settings are saved.
+- Tests: translation lookup, system-language detection, settings validation,
+  translated interval labels, an English UI integration test, and an AST check
+  that guarantees every `t("...")` string has an English entry.
+
+### Changed
+
+- Commit messages and changelog are now written in English.
+- `INTERVAL_LABELS` remains the Portuguese canonical list (used for settings
+  migration); `interval_labels()` returns translated labels for the UI/tray.
+- Theme/interval selectors in the settings window now map translated labels
+  back to their ids via per-window lookup tables instead of module constants.
 
 ## [2.3.0] — 2026-11-24
 
-### Adicionado
+### Added
 
-- Retries com backoff exponencial nas três fontes de imagens (Unsplash, Bing e Wallhaven): erros transitórios de rede, `429` e `5xx` já não deitam fora o ciclo inteiro da fonte.
-- Rotação do ficheiro de log (`log.txt` roda para `log.txt.1` ao passar de 1 MB).
-- Job de lint (ruff) no CI e cobertura de testes com `pytest-cov`.
-- CI passa a testar **Python 3.10 e 3.12** (antes só 3.12), mantendo os três sistemas operativos.
-- Metadados de packaging: homepage/repositório no `pyproject.toml` e classificador de licença MIT.
-- Novos testes: dedupe na sugestão, rotação do log, limpeza de ficheiros órfãos e versão única.
+- Retries with exponential backoff across all three image sources (Unsplash,
+  Bing, Wallhaven): transient network errors, `429` and `5xx` no longer abort
+  the whole source cycle.
+- Log rotation (`log.txt` rotates to `log.txt.1` past 1 MB).
+- Lint job (ruff) and test coverage (pytest-cov) in CI.
+- CI now tests **Python 3.10 and 3.12** (previously only 3.12) on all three OSes.
+- Packaging metadata: homepage/repository URLs and a modern `requests>=2.32`
+  floor; ruff configuration aligned with the project's style.
+- New tests: suggestion deduplication, log rotation, orphan-file cleanup and
+  single-source versioning.
 
-### Corrigido
+### Fixed
 
-- A **"Nova sugestão"** agora também rejeita wallpapers já usados (antes só verificava o tom), cumprindo a promessa de "sem repetições".
-- Ficheiros de imagem são sempre fechados (`with Image.open(...)`) — em Windows os handles abertos podiam impedir a limpeza automática de imagens antigas.
-- Um wallpaper que falhe ao ser aplicado já não deixa um ficheiro órfão na pasta de imagens.
-- Estado de execução (`last_change`, `last_source`, …) protegido por lock — já não há leituras inconsistentes entre a UI e os workers.
-- Escaping do AppleScript no macOS agora também escapa barras invertidas.
+- **"New suggestion"** now also rejects already-used wallpapers (previously it
+  only checked the tone), keeping the "no repeats" promise.
+- Image files are always closed (`with Image.open(...)`) — on Windows, open
+  handles could silently prevent the automatic cleanup of old images.
+- A wallpaper that fails to apply no longer leaves an orphan file behind.
+- Shared runtime state (`last_change`, `last_source`, …) is protected by a
+  lock — no more inconsistent reads between the UI and worker threads.
+- AppleScript escaping on macOS now also escapes backslashes.
 
-### Alterado
+### Changed
 
-- A versão passou a ter **uma única fonte de verdade** (`wallpaper_changer/__init__.py`); o `pyproject.toml` lê-a dinamicamente e o `config.py` importa-a.
-- A galeria de imagens recentes é calculada num worker (fora do thread da UI), evitando congelamentos na janela.
-- Removido o parâmetro não usado de `_enabled_sources`.
+- The version has a **single source of truth**
+  (`wallpaper_changer/__init__.py`); `pyproject.toml` reads it dynamically and
+  `config.py` imports it.
+- The recent-images gallery is computed in a worker thread (off the Tk main
+  thread), avoiding freezes in the settings window.
+- Removed the unused parameter of `_enabled_sources`.
 
 ## [2.2.1] — 2026
 
-- Arranque no Windows usa `pythonw.exe` (sem janela de consola).
-- Bandeja robustecida: fallback X11 no Linux, diálogo de aviso e mutex de instância única no Windows.
+- Windows startup uses `pythonw.exe` (no console window).
+- Hardened tray: X11 fallback on Linux, warning dialogs and a single-instance
+  mutex on Windows.
 
 ## [2.2.0] — 2026
 
-- Histórico de wallpapers usados (hash exato + percetual) para nunca repetir imagens.
+- Persistent used-wallpaper history (exact + perceptual hash) to never repeat
+  images.
 
 ## [2.1.0] — 2026
 
-- Pré-visualização tipo Wally, fonte Wallhaven (sem key), mais intervalos, pausa e correção da deteção de tema.
+- Wally-style preview, Wallhaven source (no key), more intervals, pause and
+  theme-detection fixes.
 
 ## [2.0.0] — 2026
 
-- Primeira versão pública com CI nas três plataformas e releases automáticos por tag `v*`.
+- First public release with CI on all three platforms and automatic releases
+  on `v*` tags.

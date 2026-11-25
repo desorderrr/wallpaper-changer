@@ -6,6 +6,7 @@ from __future__ import annotations
 import plistlib
 from pathlib import Path
 
+from ..i18n import t
 from .base import BasePlatform, run
 
 LAUNCH_LABEL = "com.wallpaperchanger.agent"
@@ -39,7 +40,7 @@ class Platform(BasePlatform):
         )
         ok, out = run(["osascript", "-e", script])
         if not ok:
-            raise RuntimeError("osascript falhou: %s" % out)
+            raise RuntimeError(t("osascript falhou: %s") % out)
 
     # -- arranque com o sistema ----------------------------------------
     def startup_enabled(self) -> bool:

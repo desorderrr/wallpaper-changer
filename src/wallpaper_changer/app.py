@@ -18,9 +18,10 @@ from datetime import datetime
 
 from PIL import Image
 
-from . import config, history, sources, tone
+from . import config, history, i18n, sources, tone
 from .assets import make_icon_image
 from .config import APP_NAME, APP_VERSION, INTERVALS, get
+from .i18n import t
 from .platform import platform
 
 _pystray = None
@@ -46,8 +47,10 @@ def _get_pystray():
             import pystray as mod
         except Exception as e:
             raise RuntimeError(
-                "Não consegui iniciar a bandeja do sistema. No Linux instala "
-                "python-xlib (pip) ou python3-gi + gir1.2-gtk-3.0."
+                t(
+                    "Não consegui iniciar a bandeja do sistema. No Linux instala "
+                    "python-xlib (pip) ou python3-gi + gir1.2-gtk-3.0."
+                )
             ) from e
     _pystray = mod
     return mod
@@ -88,25 +91,25 @@ def effective_theme_is_dark() -> bool:
 def status_text() -> str:
     with _state_lock:
         snapshot = dict(state)
-    tone_name = "escuro" if effective_theme_is_dark() else "claro"
+    tone_name = t("escuro") if effective_theme_is_dark() else t("claro")
     mode = {
-        "auto": "segue o sistema",
-        "dark": "sempre escuro",
-        "light": "sempre claro",
-    }.get(get("theme_mode"), "segue o sistema")
-    parts = ["Tema atual: %s (%s)" % (tone_name, mode)]
+        "auto": t("segue o sistema"),
+        "dark": t("sempre escuro"),
+        "light": t("sempre claro"),
+    }.get(get("theme_mode"), t("segue o sistema"))
+    parts = [t("Tema atual: %s (%s)") % (tone_name, mode)]
     if get("paused"):
-        parts.append("mudanças automáticas em pausa")
+        parts.append(t("mudanças automáticas em pausa"))
     if snapshot["last_source"]:
         src = {
             "unsplash": "Unsplash",
             "bing": "Bing",
             "wallhaven": "Wallhaven",
         }.get(snapshot["last_source"], snapshot["last_source"])
-        parts.append("última fonte: %s" % src)
+        parts.append(t("última fonte: %s") % src)
     if snapshot["last_change"]:
         parts.append(
-            "última troca: %s" % snapshot["last_change"].strftime("%d/%m %H:%M")
+            t("última troca: %s") % snapshot["last_change"].strftime("%d/%m %H:%M")
         )
     return " · ".join(parts)
 
@@ -149,7 +152,7 @@ def _enabled_sources() -> list[tuple[str, str, object]]:
 def change_wallpaper(manual: bool = False) -> tuple[bool, str]:
     """Troca o wallpaper respeitando o tema. Devolve (sucesso, mensagem)."""
     if not _change_lock.acquire(blocking=False):
-        return False, "Já existe uma troca de wallpaper em curso."
+        return False, t("Já existe uma troca de wallpaper em curso.")
     try:
         return _do_change(manual=manual)
     finally:
@@ -158,14 +161,14 @@ def change_wallpaper(manual: bool = False) -> tuple[bool, str]:
 
 def _do_change(manual: bool = False) -> tuple[bool, str]:
     if get("paused") and not manual:
-        return False, "Mudanças automáticas em pausa."
+        return False, t("Mudanças automáticas em pausa.")
 
     want_dark = effective_theme_is_dark()
     tone_name = "escuro" if want_dark else "claro"
 
     enabled = _enabled_sources()
     if not enabled:
-        return False, "Nenhuma fonte ativa. Ativa o Unsplash, o Bing ou o Wallhaven."
+        return False, t("Nenhuma fonte ativa. Ativa o Unsplash, o Bing ou o Wallhaven.")
 
     last_error = ""
     for src, name, fetch in enabled:
@@ -175,10 +178,10 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
             luma = tone.mean_luminance(data)
             config.log("Fonte %s: luma=%.0f (queria %s)" % (name, luma, tone_name))
             if not tone.tone_matches(luma, want_dark):
-                last_error = "%s devolveu uma imagem com o tom errado" % name
+                last_error = t("%s devolveu uma imagem com o tom errado") % name
                 continue
             if history.is_duplicate(data):
-                last_error = "%s devolveu um wallpaper repetido" % name
+                last_error = t("%s devolveu um wallpaper repetido") % name
                 config.log("Repetido de %s ignorado" % name)
                 continue
 
@@ -203,12 +206,12 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
                     last_error=None,
                 )
             config.log("Wallpaper %s aplicado: %s" % (tone_name, path))
-            return True, "Wallpaper %s aplicado (%s)." % (tone_name, name)
+            return True, t("Wallpaper %s aplicado (%s).") % (t(tone_name), name)
         except Exception as e:  # noqa: BLE001 - qualquer fonte pode falhar
             last_error = "%s: %s" % (name, e)
             config.log("Erro em %s: %r" % (name, e))
 
-    msg = "Não consegui obter uma imagem %s agora. %s" % (tone_name, last_error)
+    msg = t("Não consegui obter uma imagem %s agora. %s") % (t(tone_name), last_error)
     with _state_lock:
         state["last_error"] = msg
     config.log(msg)
@@ -230,7 +233,7 @@ def obtain_candidate() -> tuple[bool, str, str | None]:
     if not enabled:
         return (
             False,
-            "Nenhuma fonte ativa. Ativa o Unsplash, o Bing ou o Wallhaven.",
+            t("Nenhuma fonte ativa. Ativa o Unsplash, o Bing ou o Wallhaven."),
             None,
         )
 
@@ -239,18 +242,22 @@ def obtain_candidate() -> tuple[bool, str, str | None]:
         try:
             data = fetch(want_dark)
             if not tone.tone_matches(tone.mean_luminance(data), want_dark):
-                errors.append("%s: tom errado" % name)
+                errors.append(t("%s: tom errado") % name)
                 continue
             if history.is_duplicate(data):
-                errors.append("%s: wallpaper já usado" % name)
+                errors.append(t("%s: wallpaper já usado") % name)
                 config.log("Sugestão repetida de %s ignorada" % name)
                 continue
             path = save_image(data, "preview_" + src)
-            return True, "Sugestão do %s (tom %s)." % (name, tone_name), str(path)
+            return True, t("Sugestão do %s (tom %s).") % (name, t(tone_name)), str(path)
         except Exception as e:  # noqa: BLE001
             errors.append("%s: %s" % (name, e))
             config.log("Erro na sugestão (%s): %r" % (name, e))
-    return False, "Não consegui obter uma sugestão. " + "; ".join(errors[-2:]), None
+    return (
+        False,
+        t("Não consegui obter uma sugestão. %s") % "; ".join(errors[-2:]),
+        None,
+    )
 
 
 def apply_file(path) -> tuple[bool, str]:
@@ -272,10 +279,10 @@ def apply_file(path) -> tuple[bool, str]:
                 last_error=None,
             )
         config.log("Wallpaper aplicado manualmente: %s" % path)
-        return True, "Wallpaper aplicado."
+        return True, t("Wallpaper aplicado.")
     except Exception as e:  # noqa: BLE001
         config.log("Erro ao aplicar %s: %r" % (path, e))
-        return False, "Não consegui aplicar o wallpaper: %s" % e
+        return False, t("Não consegui aplicar o wallpaper: %s") % e
 
 
 def list_recent_images(limit: int = 24) -> list:
@@ -368,6 +375,7 @@ def _apply_settings(values: dict) -> str | None:
             "paused": values.get("paused", False),
             "unsplash_key": values["unsplash_key"],
             "theme_mode": values["theme_mode"],
+            "language": values.get("language", "auto"),
             "interval": values["interval"],
             "change_on_start": values["change_on_start"],
             "keep": values["keep"],
@@ -375,10 +383,17 @@ def _apply_settings(values: dict) -> str | None:
             "queries_light": values["queries_light"],
         }
     )
+    i18n.apply_language()
+    if _tray_icon is not None:  # atualiza a bandeja para o idioma novo
+        try:
+            _tray_icon.menu = build_menu()
+            _tray_icon.update_menu()
+        except Exception:  # noqa: BLE001 - a bandeja volta ao normal no restart
+            config.log("Não consegui atualizar o menu da bandeja")
     if values["startup"] != platform.startup_enabled() and not platform.set_startup(
         values["startup"]
     ):
-        return "Não consegui alterar o arranque automático do sistema."
+        return t("Não consegui alterar o arranque automático do sistema.")
     _wake.set()
     return None
 
@@ -424,11 +439,11 @@ def build_menu():
         if ok:
             _notify(
                 icon,
-                "Arranque com o sistema: %s"
+                t("Arranque com o sistema: %s")
                 % ("ON" if platform.startup_enabled() else "OFF"),
             )
         else:
-            _notify(icon, "Não consegui alterar o arranque automático.")
+            _notify(icon, t("Não consegui alterar o arranque automático."))
 
     def toggle_change_on_start(icon, item=None):
         config.set_key("change_on_start", not get("change_on_start"))
@@ -438,7 +453,8 @@ def build_menu():
         _wake.set()
         _notify(
             icon,
-            "Mudanças automáticas: %s" % ("EM PAUSA" if get("paused") else "ATIVAS"),
+            t("Mudanças automáticas: %s")
+            % (t("EM PAUSA") if get("paused") else t("ATIVAS")),
         )
 
     def toggle_source(key):
@@ -448,15 +464,15 @@ def build_menu():
         return handler
 
     return pystray.Menu(
-        pystray.MenuItem("Mudar agora", change_now, default=True),
+        pystray.MenuItem(t("Mudar agora"), change_now, default=True),
         pystray.MenuItem(
-            "Pausar mudanças automáticas",
+            t("Pausar mudanças automáticas"),
             toggle_pause,
             checked=lambda item: bool(get("paused")),
         ),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem(
-            "Intervalo",
+            t("Intervalo"),
             pystray.Menu(
                 *[
                     pystray.MenuItem(
@@ -465,27 +481,27 @@ def build_menu():
                         radio=True,
                         checked=lambda item, v=value: get("interval") == v,
                     )
-                    for value, label in config.INTERVAL_LABELS
+                    for value, label in config.interval_labels()
                 ]
             ),
         ),
         pystray.MenuItem(
-            "Tema dos wallpapers",
+            t("Tema dos wallpapers"),
             pystray.Menu(
                 pystray.MenuItem(
-                    "Seguir o tema do sistema",
+                    t("Seguir o tema do sistema"),
                     theme_action("auto"),
                     radio=True,
                     checked=lambda item: get("theme_mode") == "auto",
                 ),
                 pystray.MenuItem(
-                    "Sempre escuro",
+                    t("Sempre escuro"),
                     theme_action("dark"),
                     radio=True,
                     checked=lambda item: get("theme_mode") == "dark",
                 ),
                 pystray.MenuItem(
-                    "Sempre claro",
+                    t("Sempre claro"),
                     theme_action("light"),
                     radio=True,
                     checked=lambda item: get("theme_mode") == "light",
@@ -493,7 +509,7 @@ def build_menu():
             ),
         ),
         pystray.MenuItem(
-            "Fontes",
+            t("Fontes"),
             pystray.Menu(
                 pystray.MenuItem(
                     "Unsplash",
@@ -506,7 +522,7 @@ def build_menu():
                     checked=lambda item: bool(get("use_bing")),
                 ),
                 pystray.MenuItem(
-                    "Wallhaven (sem key)",
+                    t("Wallhaven (sem key)"),
                     toggle_source("use_wallhaven"),
                     checked=lambda item: bool(get("use_wallhaven")),
                 ),
@@ -514,32 +530,32 @@ def build_menu():
         ),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem(
-            "Iniciar com o sistema",
+            t("Iniciar com o sistema"),
             toggle_startup,
             checked=lambda item: platform.startup_enabled(),
         ),
         pystray.MenuItem(
-            "Mudar wallpaper ao arrancar o programa",
+            t("Mudar wallpaper ao arrancar o programa"),
             toggle_change_on_start,
             checked=lambda item: bool(get("change_on_start")),
         ),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem(
-            "Definições...", lambda icon, item=None: _ui_queue.put("settings")
+            t("Definições..."), lambda icon, item=None: _ui_queue.put("settings")
         ),
         pystray.MenuItem(
-            "Abrir pasta de imagens", lambda icon, item=None: open_image_folder()
+            t("Abrir pasta de imagens"), lambda icon, item=None: open_image_folder()
         ),
         pystray.MenuItem(
-            "Esquecer wallpapers usados",
+            t("Esquecer wallpapers usados"),
             lambda icon, item=None: (
                 forget_history(),
-                _notify(icon, "Histórico de repetições esquecido."),
+                _notify(icon, t("Histórico de repetições esquecido.")),
             ),
         ),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem(
-            "Sair", lambda icon, item=None: (icon.stop(), _ui_queue.put("quit"))
+            t("Sair"), lambda icon, item=None: (icon.stop(), _ui_queue.put("quit"))
         ),
     )
 
@@ -676,7 +692,7 @@ def warn_dialog(msg: str) -> None:
 
 
 def warn_already_running() -> None:
-    msg = (
+    msg = t(
         "O WallpaperChanger já está em execução.\n\n"
         "Procura o ícone (círculo meio-escuro / meio-claro) na bandeja "
         "do sistema."
@@ -698,12 +714,14 @@ def main() -> None:
         warn_dialog(str(e))
         return
 
+    config.ensure_dirs()
+    config.load_settings()
+    i18n.apply_language()
+
     if not acquire_single_instance():
         warn_already_running()
         return
 
-    config.ensure_dirs()
-    config.load_settings()
     try:
         seeded = history.seed_from_folder()
         if seeded:
@@ -743,7 +761,7 @@ def main() -> None:
                 icon.run(setup=on_ready)
             except Exception as e:  # noqa: BLE001
                 config.log("Erro na bandeja do sistema: %r" % e)
-                warn_dialog("Não consegui iniciar a bandeja do sistema: %s" % e)
+                warn_dialog(t("Não consegui iniciar a bandeja do sistema: %s") % e)
 
         threading.Thread(target=run_tray, daemon=True).start()
 

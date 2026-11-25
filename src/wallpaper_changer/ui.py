@@ -14,15 +14,21 @@ import customtkinter as ctk
 from PIL import Image
 
 from .assets import make_icon_image
-from .config import APP_VERSION, INTERVAL_LABELS, get
+from .config import APP_VERSION, get, interval_labels
+from .i18n import t
 from .platform import platform
 
-THEME_LABELS = {
-    "Seguir o tema do sistema": "auto",
-    "Sempre escuro": "dark",
-    "Sempre claro": "light",
-}
-THEME_TO_LABEL = {v: k for k, v in THEME_LABELS.items()}
+THEME_OPTIONS = [
+    ("auto", "Seguir o tema do sistema"),
+    ("dark", "Sempre escuro"),
+    ("light", "Sempre claro"),
+]
+
+
+def theme_options() -> list[tuple[str, str]]:
+    """Pares (id, rótulo traduzido) do tom dos wallpapers."""
+    return [(value, t(label)) for value, label in THEME_OPTIONS]
+
 
 SOURCE_NAMES = {
     "unsplash": "Unsplash",
@@ -72,7 +78,18 @@ class SettingsWindow(ctk.CTkToplevel):
         self._gallery_loading = False
         self._gallery_select: str | None = None
 
-        self.title("WallpaperChanger — Definições")
+        # nomes dos separadores no idioma atual (usados em _build_* e no poll)
+        self._tab_names = {
+            key: t(label)
+            for key, label in (
+                ("general", "Geral"),
+                ("preview", "Pré-visualizar"),
+                ("queries", "Pesquisas"),
+                ("about", "Sobre"),
+            )
+        }
+
+        self.title(t("WallpaperChanger — Definições"))
         self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", self._close)
 
@@ -108,13 +125,15 @@ class SettingsWindow(ctk.CTkToplevel):
         # --- Separadores -------------------------------------------------
         self.tabs = ctk.CTkTabview(self, width=720, height=500)
         self.tabs.grid(row=1, column=0, sticky="nsew", padx=20, pady=8)
-        for name in ("Geral", "Pré-visualizar", "Pesquisas", "Sobre"):
+        for name in self._tab_names.values():
             self.tabs.add(name)
 
-        self._build_general(self.tabs.tab("Geral"))
-        self._build_preview(self.tabs.tab("Pré-visualizar"))
-        self._build_queries(self.tabs.tab("Pesquisas"))
-        self._build_about(self.tabs.tab("Sobre"), open_folder, forget_history)
+        self._build_general(self.tabs.tab(self._tab_names["general"]))
+        self._build_preview(self.tabs.tab(self._tab_names["preview"]))
+        self._build_queries(self.tabs.tab(self._tab_names["queries"]))
+        self._build_about(
+            self.tabs.tab(self._tab_names["about"]), open_folder, forget_history
+        )
 
         # --- Rodapé -------------------------------------------------------
         footer = ctk.CTkFrame(self, fg_color="transparent")
@@ -122,7 +141,7 @@ class SettingsWindow(ctk.CTkToplevel):
 
         self.status_label = ctk.CTkLabel(
             footer,
-            text="Pronto.",
+            text=t("Pronto."),
             text_color=("gray40", "gray60"),
             anchor="w",
             justify="left",
@@ -131,12 +150,12 @@ class SettingsWindow(ctk.CTkToplevel):
         self.status_label.pack(side="left", fill="x", expand=True)
 
         self.save_btn = ctk.CTkButton(
-            footer, text="Gravar", width=100, command=self._save
+            footer, text=t("Gravar"), width=100, command=self._save
         )
         self.save_btn.pack(side="right")
         ctk.CTkButton(
             footer,
-            text="Cancelar",
+            text=t("Cancelar"),
             width=90,
             fg_color=("gray70", "gray30"),
             hover_color=("gray60", "gray40"),
@@ -144,7 +163,7 @@ class SettingsWindow(ctk.CTkToplevel):
         ).pack(side="right", padx=8)
         self.change_btn = ctk.CTkButton(
             footer,
-            text="Mudar agora",
+            text=t("Mudar agora"),
             width=110,
             fg_color=("gray75", "gray25"),
             hover_color=("gray65", "gray35"),
@@ -168,7 +187,7 @@ class SettingsWindow(ctk.CTkToplevel):
         box.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
             box,
-            text="Fontes de imagens",
+            text=t("Fontes de imagens"),
             font=ctk.CTkFont(size=14, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 2))
 
@@ -181,7 +200,7 @@ class SettingsWindow(ctk.CTkToplevel):
         ctk.CTkCheckBox(row, text="Unsplash", variable=self.var_unsplash).pack(
             side="left", padx=4
         )
-        ctk.CTkCheckBox(row, text="Bing (foto do dia)", variable=self.var_bing).pack(
+        ctk.CTkCheckBox(row, text=t("Bing (foto do dia)"), variable=self.var_bing).pack(
             side="left", padx=4
         )
         ctk.CTkCheckBox(row, text="Wallhaven", variable=self.var_wallhaven).pack(
@@ -190,7 +209,7 @@ class SettingsWindow(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             box,
-            text="Podes escolher só uma fonte ou combinar várias.",
+            text=t("Podes escolher só uma fonte ou combinar várias."),
             text_color=("gray45", "gray55"),
             font=ctk.CTkFont(size=11),
         ).grid(row=2, column=0, sticky="w", padx=12, pady=(0, 4))
@@ -200,13 +219,15 @@ class SettingsWindow(ctk.CTkToplevel):
             box,
             textvariable=self.var_key,
             width=650,
-            placeholder_text="Cola aqui a API key do Unsplash…",
+            placeholder_text=t("Cola aqui a API key do Unsplash…"),
         )
         key_entry.grid(row=3, column=0, sticky="ew", padx=12, pady=(4, 0))
         ctk.CTkLabel(
             box,
-            text="API key gratuita em unsplash.com/developers — só para o Unsplash. "
-            "O Wallhaven e o Bing não precisam.",
+            text=t(
+                "API key gratuita em unsplash.com/developers — só para o Unsplash. "
+                "O Wallhaven e o Bing não precisam."
+            ),
             text_color=("gray45", "gray55"),
             font=ctk.CTkFont(size=11),
         ).grid(row=4, column=0, sticky="w", padx=12, pady=(2, 10))
@@ -216,16 +237,19 @@ class SettingsWindow(ctk.CTkToplevel):
         box2.grid(row=1, column=0, sticky="ew", pady=6, padx=4)
         ctk.CTkLabel(
             box2,
-            text="Tom dos wallpapers",
+            text=t("Tom dos wallpapers"),
             font=ctk.CTkFont(size=14, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
+        self._theme_opts = theme_options()
+        self._theme_label_to_value = {label: value for value, label in self._theme_opts}
+        self._theme_value_to_label = {value: label for value, label in self._theme_opts}
         self.theme_seg = ctk.CTkSegmentedButton(
             box2,
-            values=list(THEME_LABELS),
+            values=[label for _, label in self._theme_opts],
             width=620,
         )
         self.theme_seg.set(
-            THEME_TO_LABEL.get(get("theme_mode"), "Seguir o tema do sistema")
+            self._theme_value_to_label.get(get("theme_mode"), self._theme_opts[0][1])
         )
         self.theme_seg.grid(row=1, column=0, sticky="w", padx=12, pady=(0, 12))
 
@@ -235,14 +259,15 @@ class SettingsWindow(ctk.CTkToplevel):
         box3.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
             box3,
-            text="Intervalo de mudança",
+            text=t("Intervalo de mudança"),
             font=ctk.CTkFont(size=14, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
 
-        self._label_to_value = {label: value for value, label in INTERVAL_LABELS}
-        self._value_to_label = {value: label for value, label in INTERVAL_LABELS}
+        self._interval_opts = interval_labels()
+        self._label_to_value = {label: value for value, label in self._interval_opts}
+        self._value_to_label = {value: label for value, label in self._interval_opts}
         self.var_interval = tk.StringVar(
-            value=self._value_to_label.get(get("interval"), "Diário")
+            value=self._value_to_label.get(get("interval"), self._interval_opts[-1][1])
         )
         ctk.CTkOptionMenu(
             box3,
@@ -256,28 +281,53 @@ class SettingsWindow(ctk.CTkToplevel):
         self.var_paused = tk.BooleanVar(value=bool(get("paused")))
         ctk.CTkCheckBox(
             box3,
-            text="Iniciar com o sistema",
+            text=t("Iniciar com o sistema"),
             variable=self.var_startup,
         ).grid(row=2, column=0, sticky="w", padx=12, pady=2)
         ctk.CTkCheckBox(
             box3,
-            text="Mudar wallpaper quando o programa arranca",
+            text=t("Mudar wallpaper quando o programa arranca"),
             variable=self.var_onstart,
         ).grid(row=3, column=0, sticky="w", padx=12, pady=2)
         ctk.CTkCheckBox(
             box3,
-            text='Pausar mudanças automáticas (o "Mudar agora" continua a funcionar)',
+            text=t(
+                'Pausar mudanças automáticas (o "Mudar agora" continua a funcionar)'
+            ),
             variable=self.var_paused,
         ).grid(row=4, column=0, sticky="w", padx=12, pady=2)
 
         keep_row = ctk.CTkFrame(box3, fg_color="transparent")
-        keep_row.grid(row=5, column=0, sticky="w", padx=12, pady=(8, 12))
-        ctk.CTkLabel(keep_row, text="Guardar as últimas").pack(side="left")
+        keep_row.grid(row=5, column=0, sticky="w", padx=12, pady=(8, 6))
+        ctk.CTkLabel(keep_row, text=t("Guardar as últimas")).pack(side="left")
         self.var_keep = tk.StringVar(value=str(get("keep") or 20))
         ctk.CTkEntry(keep_row, textvariable=self.var_keep, width=60).pack(
             side="left", padx=6
         )
-        ctk.CTkLabel(keep_row, text="imagens").pack(side="left")
+        ctk.CTkLabel(keep_row, text=t("imagens")).pack(side="left")
+
+        # Idioma
+        self._build_language_row(box3)
+
+    def _build_language_row(self, parent) -> None:
+        lang_row = ctk.CTkFrame(parent, fg_color="transparent")
+        lang_row.grid(row=6, column=0, sticky="w", padx=12, pady=(0, 12))
+        ctk.CTkLabel(lang_row, text=t("Idioma")).pack(side="left")
+        self._lang_label_to_value = {
+            t("Automático"): "auto",
+            t("Português"): "pt",
+            "English": "en",
+        }
+        value_to_lang_label = {v: k for k, v in self._lang_label_to_value.items()}
+        self.var_lang = tk.StringVar(
+            value=value_to_lang_label.get(get("language") or "auto", t("Automático"))
+        )
+        ctk.CTkOptionMenu(
+            lang_row,
+            values=list(self._lang_label_to_value),
+            variable=self.var_lang,
+            width=140,
+        ).pack(side="left", padx=8)
 
     def _build_preview(self, tab) -> None:
         tab.grid_columnconfigure(0, weight=1)
@@ -286,12 +336,12 @@ class SettingsWindow(ctk.CTkToplevel):
         top.grid(row=0, column=0, sticky="ew", padx=6, pady=(8, 2))
         ctk.CTkLabel(
             top,
-            text="Pré-visualização",
+            text=t("Pré-visualização"),
             font=ctk.CTkFont(size=14, weight="bold"),
         ).pack(side="left")
         ctk.CTkButton(
             top,
-            text="Atualizar",
+            text=t("Atualizar"),
             width=90,
             height=26,
             fg_color=("gray75", "gray25"),
@@ -301,7 +351,7 @@ class SettingsWindow(ctk.CTkToplevel):
 
         self.preview_label = ctk.CTkLabel(
             tab,
-            text='Ainda sem imagens. Usa "Nova sugestão".',
+            text=t('Ainda sem imagens. Usa "Nova sugestão".'),
             width=680,
             height=250,
             fg_color=("gray85", "gray18"),
@@ -328,7 +378,7 @@ class SettingsWindow(ctk.CTkToplevel):
         actions.grid(row=4, column=0, sticky="ew", padx=6, pady=(0, 6))
         self.suggest_btn = ctk.CTkButton(
             actions,
-            text="Nova sugestão",
+            text=t("Nova sugestão"),
             width=130,
             fg_color=("gray75", "gray25"),
             hover_color=("gray65", "gray35"),
@@ -337,7 +387,7 @@ class SettingsWindow(ctk.CTkToplevel):
         self.suggest_btn.pack(side="left")
         self.apply_btn = ctk.CTkButton(
             actions,
-            text="Aplicar no ambiente de trabalho",
+            text=t("Aplicar no ambiente de trabalho"),
             width=220,
             command=self._apply_selected,
             state="disabled",
@@ -360,24 +410,24 @@ class SettingsWindow(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             tab,
-            text="Pesquisas no Unsplash (uma por linha)",
+            text=t("Pesquisas no Unsplash (uma por linha)"),
             font=ctk.CTkFont(size=14, weight="bold"),
         ).grid(row=0, column=0, sticky="w", padx=8, pady=(10, 2))
         ctk.CTkLabel(
             tab,
-            text="Usadas para escolher fotos com o tom certo em cada modo.",
+            text=t("Usadas para escolher fotos com o tom certo em cada modo."),
             text_color=("gray45", "gray55"),
             font=ctk.CTkFont(size=11),
         ).grid(row=1, column=0, sticky="w", padx=8, pady=(0, 8))
 
-        ctk.CTkLabel(tab, text="Modo escuro:", anchor="w").grid(
+        ctk.CTkLabel(tab, text=t("Modo escuro:"), anchor="w").grid(
             row=2, column=0, sticky="w", padx=8
         )
         self.txt_dark = ctk.CTkTextbox(tab, height=95, width=660)
         self.txt_dark.grid(row=3, column=0, sticky="ew", padx=8, pady=(2, 10))
         self.txt_dark.insert("1.0", "\n".join(get("queries_dark")))
 
-        ctk.CTkLabel(tab, text="Modo claro:", anchor="w").grid(
+        ctk.CTkLabel(tab, text=t("Modo claro:"), anchor="w").grid(
             row=4, column=0, sticky="w", padx=8
         )
         self.txt_light = ctk.CTkTextbox(tab, height=95, width=660)
@@ -398,7 +448,7 @@ class SettingsWindow(ctk.CTkToplevel):
             justify="left",
             anchor="w",
             wraplength=640,
-            text=(
+            text=t(
                 "Muda o wallpaper automaticamente, sempre a condizer com o "
                 "tema do sistema: modo escuro → wallpapers escuros, modo "
                 "claro → wallpapers claros.\n\n"
@@ -414,22 +464,22 @@ class SettingsWindow(ctk.CTkToplevel):
         row.grid(row=2, column=0, sticky="w", padx=10, pady=(12, 10))
         ctk.CTkButton(
             row,
-            text="Abrir pasta de imagens",
+            text=t("Abrir pasta de imagens"),
             width=180,
             command=open_folder,
         ).pack(side="left")
 
         def forget():
             forget_history()
-            self._set_status("Histórico de wallpapers usados esquecido.")
+            self._set_status(t("Histórico de wallpapers usados esquecido."))
             self._refresh_gallery()
             self._set_preview_status(
-                "Histórico esquecido — as imagens podem repetir-se."
+                t("Histórico esquecido — as imagens podem repetir-se.")
             )
 
         ctk.CTkButton(
             row,
-            text="Esquecer wallpapers usados",
+            text=t("Esquecer wallpapers usados"),
             width=200,
             fg_color=("gray75", "gray25"),
             hover_color=("gray65", "gray35"),
@@ -468,7 +518,7 @@ class SettingsWindow(ctk.CTkToplevel):
         if not path_objs:
             ctk.CTkLabel(
                 self.gallery,
-                text="Sem imagens guardadas ainda.",
+                text=t("Sem imagens guardadas ainda."),
                 text_color=("gray45", "gray55"),
             ).pack(padx=10, pady=30)
             self.apply_btn.configure(state="disabled")
@@ -515,7 +565,7 @@ class SettingsWindow(ctk.CTkToplevel):
                     light_image=thumb, dark_image=thumb, size=thumb.size
                 )
         except Exception:  # noqa: BLE001
-            self.preview_status.configure(text="Não consegui abrir esta imagem.")
+            self.preview_status.configure(text=t("Não consegui abrir esta imagem."))
             return
         self.preview_label.configure(image=self._preview_photo, text="")
 
@@ -529,7 +579,7 @@ class SettingsWindow(ctk.CTkToplevel):
                 size[1],
             )
             if get("paused"):
-                info += " · mudanças em pausa"
+                info += " · " + t("mudanças em pausa")
         except OSError:
             info = str(path)
         self.preview_info.configure(text=info)
@@ -545,14 +595,14 @@ class SettingsWindow(ctk.CTkToplevel):
     def _suggest(self) -> None:
         self.suggest_btn.configure(state="disabled")
         self.apply_btn.configure(state="disabled")
-        self.preview_status.configure(text="A procurar uma sugestão…")
+        self.preview_status.configure(text=t("A procurar uma sugestão…"))
         threading.Thread(target=self._suggest_worker, daemon=True).start()
 
     def _suggest_worker(self) -> None:
         try:
             ok, msg, path = self._candidate()
         except Exception as e:  # noqa: BLE001
-            ok, msg, path = False, "Erro inesperado: %r" % e, None
+            ok, msg, path = False, t("Erro inesperado: %r") % e, None
         self._status_q.put(("preview", ok, msg, path))
 
     def _apply_selected(self) -> None:
@@ -561,14 +611,14 @@ class SettingsWindow(ctk.CTkToplevel):
         path = str(self._selected_path)
         self.apply_btn.configure(state="disabled")
         self.suggest_btn.configure(state="disabled")
-        self.preview_status.configure(text="A aplicar…")
+        self.preview_status.configure(text=t("A aplicar…"))
         threading.Thread(target=self._apply_worker, args=(path,), daemon=True).start()
 
     def _apply_worker(self, path: str) -> None:
         try:
             ok, msg = self._apply_image(path)
         except Exception as e:  # noqa: BLE001
-            ok, msg = False, "Erro inesperado: %r" % e
+            ok, msg = False, t("Erro inesperado: %r") % e
         self._status_q.put(("applied", ok, msg, path))
 
     # ------------------------------------------------------------------
@@ -610,14 +660,14 @@ class SettingsWindow(ctk.CTkToplevel):
         if str(self.change_btn.cget("state")) == "disabled":
             return
         self.change_btn.configure(state="disabled")
-        self._set_status("A procurar um wallpaper novo…")
+        self._set_status(t("A procurar um wallpaper novo…"))
         threading.Thread(target=self._change_worker, daemon=True).start()
 
     def _change_worker(self) -> None:
         try:
             ok, msg = self._change(True)
         except Exception as e:  # noqa: BLE001
-            ok, msg = False, "Erro inesperado: %r" % e
+            ok, msg = False, t("Erro inesperado: %r") % e
         self._status_q.put(("status", ok, msg, None))
 
     def _poll(self) -> None:
@@ -673,7 +723,7 @@ class SettingsWindow(ctk.CTkToplevel):
             keep = max(5, min(200, int(self.var_keep.get())))
         except (ValueError, tk.TclError):
             self._set_status(
-                "O número de imagens a guardar deve ser 5–200.",  # noqa: RUF001
+                t("O número de imagens a guardar deve ser 5–200."),  # noqa: RUF001
                 error=True,
             )
             return
@@ -683,7 +733,8 @@ class SettingsWindow(ctk.CTkToplevel):
             "use_wallhaven": self.var_wallhaven.get(),
             "paused": self.var_paused.get(),
             "unsplash_key": self.var_key.get().strip(),
-            "theme_mode": THEME_LABELS.get(self.theme_seg.get(), "auto"),
+            "theme_mode": self._theme_label_to_value.get(self.theme_seg.get(), "auto"),
+            "language": self._lang_label_to_value.get(self.var_lang.get(), "auto"),
             "interval": self._label_to_value.get(self.var_interval.get(), "daily"),
             "change_on_start": self.var_onstart.get(),
             "startup": self.var_startup.get(),

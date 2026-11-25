@@ -23,6 +23,7 @@ Muda o wallpaper automaticamente, **sempre a condizer com o tema do sistema**: m
 - **Pausar mudanças automáticas** — pausa sem fechar a app; o "Mudar agora" continua a funcionar
 - **Arranque automático** com o sistema (Registo no Windows, LaunchAgent no macOS, autostart XDG no Linux)
 - **Interface moderna** (customtkinter) em modo escuro/claro automático
+- **Português e inglês** — deteta o idioma do sistema automaticamente; podes escolher manualmente em **Definições → Geral → Idioma** (a bandeja e as notificações também mudam de idioma)
 - **Instância única**, atualização dos wallpapers com proteção contra trocas simultâneas e limpeza automática das imagens antigas
 - Guarda as últimas N imagens na pasta de dados, com pesquisas configuráveis por tom
 
@@ -112,6 +113,7 @@ Estrutura:
 src/wallpaper_changer/
 ├── app.py          # tray, agendador, lógica de troca, instância única
 ├── ui.py           # janela de definições (customtkinter)
+├── i18n.py         # traduções pt/en (catálogo em código, sem .mo)
 ├── config.py       # settings, caminhos, migrações
 ├── history.py      # histórico de wallpapers usados (sem repetições)
 ├── sources.py      # Unsplash + Wallhaven + Bing

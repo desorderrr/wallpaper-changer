@@ -22,6 +22,7 @@ MAX_LOG_BYTES = 1_000_000
 DEFAULTS = {
     "interval": "daily",  # startup_only | 5m | 10m | 15m | 30m | 1h | 2h | 3h | 6h | 12h | daily
     "theme_mode": "auto",  # auto (segue o sistema) | dark | light
+    "language": "auto",  # auto (segue o sistema) | pt | en
     "use_unsplash": True,
     "use_bing": True,
     "use_wallhaven": False,
@@ -69,6 +70,14 @@ INTERVAL_LABELS = [
     ("12h", "Cada 12 horas"),
     ("daily", "Diário"),
 ]
+
+
+def interval_labels() -> list[tuple[str, str]]:
+    """Pares (id, rótulo traduzido) para mostrar na UI e na bandeja."""
+    from .i18n import t
+
+    return [(value, t(label)) for value, label in INTERVAL_LABELS]
+
 
 _lock = threading.RLock()
 _settings = dict(DEFAULTS)
@@ -134,6 +143,9 @@ def load_settings() -> None:
         migrated = True
     if _settings.get("theme_mode") not in ("auto", "dark", "light"):
         _settings["theme_mode"] = "auto"
+        migrated = True
+    if _settings.get("language") not in ("auto", "pt", "en"):
+        _settings["language"] = "auto"
         migrated = True
     try:
         keep = max(5, min(200, int(_settings.get("keep") or 20)))

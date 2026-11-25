@@ -8,6 +8,7 @@ import shutil
 from pathlib import Path
 from urllib.parse import quote
 
+from ..i18n import t
 from .base import BasePlatform, run
 
 
@@ -202,8 +203,11 @@ class Platform(BasePlatform):
                 errors.append("%s: %r" % (fn.__name__, e))
 
         raise RuntimeError(
-            "Não consegui definir o wallpaper neste ambiente "
-            "(XDG_CURRENT_DESKTOP=%r). %s" % (de, " | ".join(errors[-3:]))
+            t(
+                "Não consegui definir o wallpaper neste ambiente "
+                "(XDG_CURRENT_DESKTOP=%r). %s"
+            )
+            % (de, " | ".join(errors[-3:]))
         )
 
     # -- arranque com o sistema ----------------------------------------

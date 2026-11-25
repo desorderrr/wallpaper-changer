@@ -69,3 +69,45 @@ def test_settings_window_builds_and_saves(data_dir):
             root.destroy()
         except Exception:  # noqa: BLE001 - limpeza best-effort no teste
             pass
+
+
+def test_settings_window_in_english(data_dir, monkeypatch):
+    """Os rótulos e os valores gravados não dependem do idioma."""
+    from wallpaper_changer import i18n
+
+    monkeypatch.setattr(i18n, "_current", "en")
+    root = customtkinter.CTk()
+    root.withdraw()
+    saved = {}
+
+    try:
+        from wallpaper_changer.ui import SettingsWindow
+
+        win = SettingsWindow(
+            root,
+            on_save=lambda values: saved.update(values) or None,
+            on_close=lambda: None,
+            change_wallpaper=lambda manual: (True, "ok"),
+            status_text=lambda: "Current theme: dark",
+            open_folder=lambda: None,
+            preview_candidate=lambda: (True, "ok", None),
+            apply_image=lambda p: (True, "ok"),
+            list_recent=list,
+            forget_history=lambda: None,
+        )
+        root.update_idletasks()
+        assert "Settings" in win.title()
+        assert win.tabs.tab("General") is not None
+        assert win.var_interval.get() in win._label_to_value
+
+        win.var_interval.set("Every hour")
+        win.var_lang.set("English")
+        win._save()
+        assert saved["interval"] == "1h"
+        assert saved["language"] == "en"
+        assert saved["theme_mode"] in ("auto", "dark", "light")
+    finally:
+        try:
+            root.destroy()
+        except Exception:  # noqa: BLE001 - limpeza best-effort no teste
+            pass
