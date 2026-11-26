@@ -11,6 +11,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Local folder source**: pick a directory with your own wallpapers
+  (JPG/PNG/WebP/BMP, subfolders included, images 1280 px+ wide) and the app
+  chooses from it with the same tone and no-repeat rules — no network or API
+  key needed. New `use_local`/`local_folder` settings, a folder picker in
+  Settings → Image sources, a tray toggle and pt/en messages.
 - **Resolution setting** — Auto (detects the widest monitor and picks 1080p,
   1440p or 4K), High (4K) and Low (1080p). Unsplash, Wallhaven and Bing are
   queried at the matching size (Unsplash quality adapts too) and oversized

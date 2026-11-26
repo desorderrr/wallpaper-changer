@@ -54,6 +54,7 @@ CATALOGS: dict[str, dict[str, str]] = {
         "Sempre claro": "Always light",
         "Fontes": "Sources",
         "Wallhaven (sem key)": "Wallhaven (no key)",
+        "Pasta local": "Local folder",
         "Iniciar com o sistema": "Start with the system",
         "Mudar wallpaper ao arrancar o programa": "Change wallpaper when the app starts",
         "Definições...": "Settings...",
@@ -95,6 +96,9 @@ CATALOGS: dict[str, dict[str, str]] = {
         "Sobre": "About",
         "Fontes de imagens": "Image sources",
         "Bing (foto do dia)": "Bing (photo of the day)",
+        "Escolher…": "Choose…",
+        "Escolhe uma pasta com os teus wallpapers…": "Pick a folder with your own wallpapers…",
+        "Escolhe a pasta dos teus wallpapers (ou desativa a fonte Pasta local).": "Pick your wallpapers folder (or disable the Local folder source).",
         "Podes escolher só uma fonte ou combinar várias.": "You can pick a single source or combine several.",
         "Cola aqui a API key do Unsplash…": "Paste your Unsplash API key here…",
         "API key gratuita em unsplash.com/developers — só para o Unsplash. "
@@ -161,6 +165,10 @@ CATALOGS: dict[str, dict[str, str]] = {
         "Bing não devolveu imagens": "Bing returned no images",
         "Bing não tem imagens novas desse tom nos últimos dias": "Bing has no new images with that tone in the last few days",
         "Wallhaven não devolveu imagens novas com o tom pedido": "Wallhaven returned no new images with the requested tone",
+        "Nenhuma pasta local escolhida (Definições → Fontes de imagens)": "No local folder chosen (Settings → Image sources)",
+        "Pasta local inválida ou inexistente: %s": "Local folder is invalid or missing: %s",
+        "Sem imagens suportadas em: %s": "No supported images in: %s",
+        "A pasta local não tem imagens novas com o tom pedido": "The local folder has no new images with the requested tone",
         # --- platform -----------------------------------------------------
         "Não consegui definir o wallpaper neste ambiente "
         "(XDG_CURRENT_DESKTOP=%r). %s": "Could not set the wallpaper in this environment "

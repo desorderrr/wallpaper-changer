@@ -59,10 +59,18 @@ def test_keep_validation(data_dir):
 
 def test_new_defaults_and_intervals(data_dir):
     assert config.get("use_wallhaven") is False
+    assert config.get("use_local") is False
+    assert config.get("local_folder") == ""
     assert config.get("paused") is False
     assert "5m" in config.INTERVALS
     assert "12h" in config.INTERVALS
     assert len(config.INTERVAL_LABELS) == len(config.INTERVALS) + 1  # + startup_only
+
+
+def test_invalid_local_folder_is_normalised(data_dir):
+    config.settings_file().write_text('{"local_folder": 123}', encoding="utf-8")
+    config.load_settings()
+    assert config.get("local_folder") == ""
 
 
 def test_set_many_writes_once(data_dir, monkeypatch):

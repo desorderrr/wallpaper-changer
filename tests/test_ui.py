@@ -66,6 +66,8 @@ def test_settings_window_builds_and_saves(data_dir, tk_root):
     assert hasattr(win, "var_wallhaven")
     assert hasattr(win, "var_paused")
     assert hasattr(win, "var_res")
+    assert hasattr(win, "var_local")
+    assert hasattr(win, "var_folder")
     assert win.tabs.tab("Pré-visualizar") is not None
 
     # pick an interval by label and make sure the id is what gets saved
@@ -75,10 +77,36 @@ def test_settings_window_builds_and_saves(data_dir, tk_root):
     assert saved["interval"] == "1h"
     assert saved["theme_mode"] in ("auto", "dark", "light")
     assert saved["resolution"] in ("auto", "high", "low")
+    assert saved["use_local"] is False
+    assert saved["local_folder"] == ""
     assert isinstance(saved["queries_dark"], list)
     assert isinstance(saved["use_wallhaven"], bool)
     assert isinstance(saved["paused"], bool)
     assert closed == [1]
+
+
+def test_local_source_requires_a_folder(data_dir, tk_root):
+    saved = {}
+    from wallpaper_changer.ui import SettingsWindow
+
+    win = SettingsWindow(
+        tk_root,
+        on_save=lambda values: saved.update(values) or None,
+        on_close=lambda: None,
+        change_wallpaper=lambda manual: (True, "ok"),
+        status_text=lambda: "",
+        open_folder=lambda: None,
+        preview_candidate=lambda: (True, "ok", None),
+        apply_image=lambda p: (True, "ok"),
+        list_recent=list,
+        forget_history=lambda: None,
+    )
+    win.var_local.set(True)
+    win.var_folder.set("")
+    win._save()
+
+    assert not saved  # save was refused, the window stays open
+    assert "pasta" in win.status_label.cget("text").lower()
 
 
 def test_settings_window_in_english(data_dir, tk_root, monkeypatch):

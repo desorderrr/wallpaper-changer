@@ -9,6 +9,7 @@ import tkinter as tk
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
+from tkinter import filedialog
 
 import customtkinter as ctk
 from PIL import Image
@@ -41,6 +42,8 @@ def _source_from_path(path: Path) -> str:
     stem = path.stem
     stem = stem.removeprefix("preview_")
     key = stem.split("_", 1)[0]
+    if key == "local":
+        return t("Pasta local")
     return SOURCE_NAMES.get(key, key.title())
 
 
@@ -178,10 +181,7 @@ class SettingsWindow(ctk.CTkToplevel):
     # ------------------------------------------------------------------
     # Building the tabs
     # ------------------------------------------------------------------
-    def _build_general(self, tab) -> None:
-        tab.grid_columnconfigure(0, weight=1)
-
-        # Sources
+    def _build_sources_box(self, tab) -> None:
         box = ctk.CTkFrame(tab)
         box.grid(row=0, column=0, sticky="ew", pady=(8, 6), padx=4)
         box.grid_columnconfigure(0, weight=1)
@@ -194,6 +194,7 @@ class SettingsWindow(ctk.CTkToplevel):
         self.var_unsplash = tk.BooleanVar(value=bool(get("use_unsplash")))
         self.var_bing = tk.BooleanVar(value=bool(get("use_bing")))
         self.var_wallhaven = tk.BooleanVar(value=bool(get("use_wallhaven")))
+        self.var_local = tk.BooleanVar(value=bool(get("use_local")))
 
         row = ctk.CTkFrame(box, fg_color="transparent")
         row.grid(row=1, column=0, sticky="w", padx=8, pady=2)
@@ -206,22 +207,36 @@ class SettingsWindow(ctk.CTkToplevel):
         ctk.CTkCheckBox(row, text="Wallhaven", variable=self.var_wallhaven).pack(
             side="left", padx=4
         )
+        ctk.CTkCheckBox(row, text=t("Pasta local"), variable=self.var_local).pack(
+            side="left", padx=4
+        )
 
-        ctk.CTkLabel(
-            box,
-            text=t("Podes escolher só uma fonte ou combinar várias."),
-            text_color=("gray45", "gray55"),
-            font=ctk.CTkFont(size=11),
-        ).grid(row=2, column=0, sticky="w", padx=12, pady=(0, 4))
+        folder_row = ctk.CTkFrame(box, fg_color="transparent")
+        folder_row.grid(row=2, column=0, sticky="ew", padx=12, pady=(2, 2))
+        ctk.CTkLabel(folder_row, text=t("Pasta local")).pack(side="left")
+        self.var_folder = tk.StringVar(value=get("local_folder") or "")
+        ctk.CTkEntry(
+            folder_row,
+            textvariable=self.var_folder,
+            width=430,
+            placeholder_text=t("Escolhe uma pasta com os teus wallpapers…"),
+        ).pack(side="left", padx=8, fill="x", expand=True)
+        ctk.CTkButton(
+            folder_row,
+            text=t("Escolher…"),
+            width=90,
+            fg_color=("gray75", "gray25"),
+            hover_color=("gray65", "gray35"),
+            command=self._choose_folder,
+        ).pack(side="left")
 
         self.var_key = tk.StringVar(value=get("unsplash_key") or "")
-        key_entry = ctk.CTkEntry(
+        ctk.CTkEntry(
             box,
             textvariable=self.var_key,
             width=650,
             placeholder_text=t("Cola aqui a API key do Unsplash…"),
-        )
-        key_entry.grid(row=3, column=0, sticky="ew", padx=12, pady=(4, 0))
+        ).grid(row=3, column=0, sticky="ew", padx=12, pady=(4, 0))
         ctk.CTkLabel(
             box,
             text=t(
@@ -231,6 +246,10 @@ class SettingsWindow(ctk.CTkToplevel):
             text_color=("gray45", "gray55"),
             font=ctk.CTkFont(size=11),
         ).grid(row=4, column=0, sticky="w", padx=12, pady=(2, 10))
+
+    def _build_general(self, tab) -> None:
+        tab.grid_columnconfigure(0, weight=1)
+        self._build_sources_box(tab)
 
         # Tone
         box2 = ctk.CTkFrame(tab)
@@ -348,6 +367,13 @@ class SettingsWindow(ctk.CTkToplevel):
             variable=self.var_lang,
             width=140,
         ).pack(side="left", padx=8)
+
+    def _choose_folder(self) -> None:
+        folder = filedialog.askdirectory(
+            initialdir=self.var_folder.get().strip() or None
+        )
+        if folder:
+            self.var_folder.set(folder)
 
     def _build_preview(self, tab) -> None:
         tab.grid_columnconfigure(0, weight=1)
@@ -747,10 +773,22 @@ class SettingsWindow(ctk.CTkToplevel):
                 error=True,
             )
             return
+        folder = self.var_folder.get().strip()
+        if self.var_local.get() and not folder:
+            self._set_status(
+                t(
+                    "Escolhe a pasta dos teus wallpapers "
+                    "(ou desativa a fonte Pasta local)."
+                ),
+                error=True,
+            )
+            return
         values = {
             "use_unsplash": self.var_unsplash.get(),
             "use_bing": self.var_bing.get(),
             "use_wallhaven": self.var_wallhaven.get(),
+            "use_local": self.var_local.get(),
+            "local_folder": folder,
             "paused": self.var_paused.get(),
             "unsplash_key": self.var_key.get().strip(),
             "theme_mode": self._theme_label_to_value.get(self.theme_seg.get(), "auto"),

@@ -105,6 +105,7 @@ def status_text() -> str:
             "unsplash": "Unsplash",
             "bing": "Bing",
             "wallhaven": "Wallhaven",
+            "local": t("Pasta local"),
         }.get(snapshot["last_source"], snapshot["last_source"])
         parts.append(t("última fonte: %s") % src)
     if snapshot["last_change"]:
@@ -150,6 +151,8 @@ def _enabled_sources() -> list[tuple[str, str, object]]:
         entries.append(("wallhaven", "Wallhaven", sources.fetch_wallhaven))
     if get("use_bing"):
         entries.append(("bing", "Bing", sources.fetch_bing))
+    if get("use_local"):
+        entries.append(("local", t("Pasta local"), sources.fetch_local))
     random.shuffle(entries)
     return entries
 
@@ -403,6 +406,8 @@ def _apply_settings(values: dict) -> str | None:
             "use_unsplash": values["use_unsplash"],
             "use_bing": values["use_bing"],
             "use_wallhaven": values.get("use_wallhaven", False),
+            "use_local": values.get("use_local", False),
+            "local_folder": values.get("local_folder", ""),
             "paused": values.get("paused", False),
             "unsplash_key": values["unsplash_key"],
             "theme_mode": values["theme_mode"],
@@ -557,6 +562,11 @@ def build_menu():
                     t("Wallhaven (sem key)"),
                     toggle_source("use_wallhaven"),
                     checked=lambda item: bool(get("use_wallhaven")),
+                ),
+                pystray.MenuItem(
+                    t("Pasta local"),
+                    toggle_source("use_local"),
+                    checked=lambda item: bool(get("use_local")),
                 ),
             ),
         ),

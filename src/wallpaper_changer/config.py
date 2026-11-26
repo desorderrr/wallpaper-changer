@@ -27,6 +27,8 @@ DEFAULTS = {
     "use_unsplash": True,
     "use_bing": True,
     "use_wallhaven": False,
+    "use_local": False,  # local folder source
+    "local_folder": "",  # folder with the user's own wallpapers
     "paused": False,  # pauses automatic changes
     "change_on_start": True,
     "unsplash_key": "",
@@ -150,6 +152,9 @@ def load_settings() -> None:
         migrated = True
     if _settings.get("resolution") not in ("auto", "high", "low"):
         _settings["resolution"] = "auto"
+        migrated = True
+    if not isinstance(_settings.get("local_folder"), str):
+        _settings["local_folder"] = ""
         migrated = True
     try:
         keep = max(5, min(200, int(_settings.get("keep") or 20)))

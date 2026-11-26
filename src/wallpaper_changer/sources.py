@@ -7,9 +7,12 @@ finds one with the requested tone (checked by luminance).
 
 from __future__ import annotations
 
+import io
 import random
+from pathlib import Path
 
 import requests
+from PIL import Image
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -18,6 +21,10 @@ from .i18n import t
 
 UA = {"User-Agent": config.APP_NAME}
 MAX_TONE_TRIES = 6
+LOCAL_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+LOCAL_MAX_SCAN = 5000
+LOCAL_MAX_TRIES = 30
+LOCAL_MIN_WIDTH = 1280
 
 _session: requests.Session | None = None
 
@@ -223,3 +230,53 @@ def fetch_wallhaven(want_dark: bool = True) -> bytes:
             if _acceptable(image, want_dark):
                 return image
     raise RuntimeError(t("Wallhaven não devolveu imagens novas com o tom pedido"))
+
+
+# ---------------------------------------------------------------------------
+# Local folder (no network; the user's own collection)
+# ---------------------------------------------------------------------------
+def local_candidates(folder: str) -> list[Path]:
+    """Image files in ``folder`` (subfolders included, capped)."""
+    root = Path(folder).expanduser()
+    if not root.is_dir():
+        raise RuntimeError(t("Pasta local inválida ou inexistente: %s") % folder)
+    files: list[Path] = []
+    for path in root.rglob("*"):
+        if path.is_file() and path.suffix.lower() in LOCAL_SUFFIXES:
+            files.append(path)
+            if len(files) >= LOCAL_MAX_SCAN:
+                break
+    return files
+
+
+def _wide_enough(data: bytes) -> bool:
+    """Reject thumbnails/small images that would be upscaled by the wallpaper."""
+    try:
+        with Image.open(io.BytesIO(data)) as img:
+            return img.width >= LOCAL_MIN_WIDTH
+    except Exception:  # noqa: BLE001 - unreadable file counts as unusable
+        return False
+
+
+def fetch_local(want_dark: bool = True) -> bytes:
+    """Pick an image from the folder chosen in the settings (no network)."""
+    folder = (config.get("local_folder") or "").strip()
+    if not folder:
+        raise RuntimeError(
+            t("Nenhuma pasta local escolhida (Definições → Fontes de imagens)")
+        )
+    files = local_candidates(folder)
+    if not files:
+        raise RuntimeError(t("Sem imagens suportadas em: %s") % folder)
+
+    random.shuffle(files)
+    for path in files[:LOCAL_MAX_TRIES]:
+        try:
+            data = path.read_bytes()
+        except OSError:
+            continue
+        if not _wide_enough(data):
+            continue
+        if _acceptable(data, want_dark):
+            return data
+    raise RuntimeError(t("A pasta local não tem imagens novas com o tom pedido"))

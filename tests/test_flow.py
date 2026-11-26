@@ -6,9 +6,9 @@ from PIL import Image
 from wallpaper_changer import app, config
 
 
-def img(color):
+def img(color, size=(64, 64)):
     b = io.BytesIO()
-    Image.new("RGB", (64, 64), color).save(b, "PNG")
+    Image.new("RGB", size, color).save(b, "PNG")
     return b.getvalue()
 
 
@@ -98,6 +98,25 @@ def test_only_wallhaven_selected(data_dir, monkeypatch):
     )
     ok, msg = app.change_wallpaper()
     assert ok and "Wallhaven" in msg
+    assert applied
+
+
+def test_local_folder_source_end_to_end(data_dir, monkeypatch, tmp_path):
+    folder = tmp_path / "collection"
+    folder.mkdir()
+    (folder / "dark.png").write_bytes(img((8, 8, 8), size=(1280, 720)))
+    config.set_key("theme_mode", "dark")
+    config.set_key("use_unsplash", False)
+    config.set_key("use_bing", False)
+    config.set_key("use_wallhaven", False)
+    config.set_key("use_local", True)
+    config.set_key("local_folder", str(folder))
+    applied = []
+    monkeypatch.setattr(app.platform, "set_wallpaper", applied.append)
+
+    ok, msg = app.change_wallpaper()
+    assert ok
+    assert "Pasta local" in msg
     assert applied
 
 

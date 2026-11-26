@@ -3,12 +3,18 @@ import io
 import pytest
 from PIL import Image
 
-from wallpaper_changer import config, sources
+from wallpaper_changer import config, history, sources
 
 
 def img(color):
     b = io.BytesIO()
     Image.new("RGB", (64, 64), color).save(b, "PNG")
+    return b.getvalue()
+
+
+def local_png(color, size=(1280, 720)):
+    b = io.BytesIO()
+    Image.new("RGB", size, color).save(b, "PNG")
     return b.getvalue()
 
 
@@ -245,3 +251,54 @@ def test_bing_high_tries_uhd(data_dir, monkeypatch):
     monkeypatch.setattr(sources, "_http_get", fake_get)
     sources.fetch_bing(True)
     assert any("UHD" in u for u in calls)
+
+
+# --- Local folder -----------------------------------------------------------
+def test_local_without_folder_raises(data_dir):
+    config.set_key("local_folder", "")
+    with pytest.raises(RuntimeError, match="pasta local"):
+        sources.fetch_local(True)
+
+
+def test_local_picks_image_of_the_right_tone(data_dir, tmp_path):
+    folder = tmp_path / "collection"
+    folder.mkdir()
+    dark = local_png((8, 8, 8))
+    light = local_png((250, 250, 250))
+    (folder / "dark.png").write_bytes(dark)
+    (folder / "light.png").write_bytes(light)
+    config.set_key("local_folder", str(folder))
+
+    assert sources.fetch_local(True) == dark
+    assert sources.fetch_local(False) == light
+
+
+def test_local_includes_subfolders(data_dir, tmp_path):
+    folder = tmp_path / "collection"
+    nested = folder / "holidays" / "2026"
+    nested.mkdir(parents=True)
+    dark = local_png((10, 10, 10))
+    (nested / "photo.png").write_bytes(dark)
+    config.set_key("local_folder", str(folder))
+
+    assert sources.fetch_local(True) == dark
+
+
+def test_local_skips_duplicates_and_small_images(data_dir, tmp_path):
+    folder = tmp_path / "collection"
+    folder.mkdir()
+    repeated = local_png((8, 8, 8))
+    small = local_png((5, 5, 5), size=(320, 180))
+    (folder / "repeated.png").write_bytes(repeated)
+    (folder / "small.png").write_bytes(small)
+    config.set_key("local_folder", str(folder))
+    history.add(repeated, "local")
+
+    with pytest.raises(RuntimeError, match="tom"):
+        sources.fetch_local(True)
+
+
+def test_local_invalid_folder_raises(data_dir, tmp_path):
+    config.set_key("local_folder", str(tmp_path / "does-not-exist"))
+    with pytest.raises(RuntimeError, match="inválida"):
+        sources.fetch_local(True)

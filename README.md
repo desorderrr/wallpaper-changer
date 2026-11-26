@@ -27,12 +27,15 @@ window.
 - **Wally-style preview** — a tab with the current wallpaper, a gallery of
   recent images (click to preview), a **New suggestion** button (fetches a new
   image without applying it) and **Apply to desktop**
-- **Three image sources**
+- **Four image sources**
   - [Unsplash](https://unsplash.com/developers) — official API, needs a free
     *Access Key*
   - [Wallhaven](https://wallhaven.cc) — millions of 2K+ wallpapers, **no key**
   - [Bing Photo of the Day](https://www.bing.com) — no sign-up, with variety
     from the last 8 days
+  - **Your own folder** — pick a directory with your wallpapers
+    (JPG/PNG/WebP/BMP, subfolders included, 1280 px+); the app chooses from it
+    with the same tone and no-repeat rules, no network or key needed
   - **Pick just one source or combine several** (independent checkboxes)
 - **Resolution: Auto / High / Low** — Auto matches your screen (1080p, 1440p
   or 4K) so images don't waste bandwidth; High forces 4K and Low 1080p.
