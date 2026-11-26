@@ -34,6 +34,7 @@ CATALOGS: dict[str, dict[str, str]] = {
         "%s devolveu uma imagem com o tom errado": "%s returned an image with the wrong tone",
         "%s devolveu um wallpaper repetido": "%s returned a repeated wallpaper",
         "Não consegui obter uma imagem %s agora. %s": "Could not get a %s image right now. %s",
+        "Sem imagens novas — reutilizei um wallpaper %s guardado.": "No new images — reused a saved %s wallpaper.",
         "Wallpaper %s aplicado (%s).": "Wallpaper %s applied (%s).",
         "Wallpaper aplicado.": "Wallpaper applied.",
         "Não consegui aplicar o wallpaper: %s": "Could not apply the wallpaper: %s",

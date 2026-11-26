@@ -41,6 +41,9 @@ window.
   source tries other candidates until it finds a new one, and the gallery
   hides duplicates too. There is a button to forget the history in the
   **About** tab
+- **Offline fallback** — if the network fails (or no source has a new image of
+  the right tone), the app reuses a previously saved wallpaper with the correct
+  tone instead of leaving the desktop unchanged
 - **Intervals**: at startup only, 5, 10, 15, 30 minutes, 1, 2, 3, 6, 12 hours
   or daily
 - **Pause automatic changes** — pause without closing the app; "Change now"

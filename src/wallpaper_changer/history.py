@@ -12,16 +12,19 @@ import hashlib
 import io
 import json
 import os
+import random
 import threading
 from datetime import datetime
 from pathlib import Path
 
 from PIL import Image
 
-from . import config
+from . import config, tone
 
 MAX_ITEMS = 500
 HAMMING_MAX = 2  # max aHash distance to consider "the same image"
+# How many recent matching images the offline fallback samples from.
+FALLBACK_CANDIDATES = 20
 
 _lock = threading.RLock()
 _items: list[dict] | None = None
@@ -174,6 +177,32 @@ def reset() -> None:
 def count() -> int:
     with _lock:
         return len(_load())
+
+
+def pick_for_tone(want_dark: bool, exclude: str | None = None) -> Path | None:
+    """Pick an existing saved image with the requested tone.
+
+    Used as an offline fallback when no source can provide a new image.
+    Samples the most recent matches and ignores files that were cleaned up.
+    """
+    candidates: list[Path] = []
+    with _lock:
+        items = list(_load())
+    for item in reversed(items):
+        path = item.get("path") or ""
+        if not path or (exclude and path == exclude):
+            continue
+        luma = item.get("luma")
+        if not isinstance(luma, (int, float)):
+            continue
+        if not tone.tone_matches(float(luma), want_dark):
+            continue
+        file = Path(path)
+        if file.is_file():
+            candidates.append(file)
+            if len(candidates) >= FALLBACK_CANDIDATES:
+                break
+    return random.choice(candidates) if candidates else None
 
 
 def seed_from_folder() -> int:

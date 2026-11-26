@@ -19,8 +19,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
   and `xrandr` on Linux, with a 1920 px fallback.
 - New `resolution` setting with validation/migration, plus a Resolution
   selector in Settings → General next to the language selector.
+- **Offline fallback**: when no source can provide a new image (network down,
+  wrong tone or everything already used), the app reuses a saved wallpaper with
+  the right tone instead of failing — it picks from the 20 most recent matches,
+  skips the current wallpaper and missing files. New messages in pt/en.
 - Tests for screen bucketing, per-source size parameters and the
-  downscale-on-save path.
+  downscale-on-save path, plus fallback selection (tone, exclusion, missing
+  files) and the change flow using it.
 
 ### Fixed
 

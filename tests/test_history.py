@@ -63,3 +63,32 @@ def test_seed_from_folder(data_dir):
     assert history.is_duplicate(img)
     # if history already exists, do not seed again
     assert history.seed_from_folder() == 0
+
+
+def test_pick_for_tone_returns_matching_saved_image(data_dir):
+    from wallpaper_changer import config
+
+    dark = jpg((10, 10, 10))
+    light = jpg((250, 250, 250))
+    dark_path = config.image_dir() / "bing_dark.jpg"
+    light_path = config.image_dir() / "bing_light.jpg"
+    dark_path.write_bytes(dark)
+    light_path.write_bytes(light)
+    history.add(dark, "bing", dark_path)
+    history.add(light, "bing", light_path)
+
+    assert history.pick_for_tone(True) == dark_path
+    assert history.pick_for_tone(False) == light_path
+
+
+def test_pick_for_tone_respects_exclude_and_missing_files(data_dir):
+    from wallpaper_changer import config
+
+    dark = jpg((10, 10, 10))
+    path = config.image_dir() / "bing_x.jpg"
+    path.write_bytes(dark)
+    history.add(dark, "bing", path)
+
+    assert history.pick_for_tone(True, exclude=str(path)) is None
+    path.unlink()
+    assert history.pick_for_tone(True) is None

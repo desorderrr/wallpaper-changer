@@ -139,6 +139,51 @@ def test_repeated_wallpaper_is_blocked(bing_only, monkeypatch):
     assert "repet" in msg.lower()
 
 
+def test_change_falls_back_to_saved_wallpaper(bing_only, monkeypatch):
+    data = img((8, 8, 8))
+    path = app.save_image(data, "bing")
+    app.history.add(data, "bing", path)
+
+    def fail(want_dark=True):
+        raise OSError("no network")
+
+    monkeypatch.setattr(app.sources, "fetch_bing", fail)
+    ok, msg = app.change_wallpaper()
+    assert ok
+    assert "reutilizei" in msg
+    assert bing_only and bing_only[0] == path
+    assert app.state["last_source"] == "bing"
+    assert app.state["last_path"] == str(path)
+
+
+def test_fallback_respects_tone(bing_only, monkeypatch):
+    light = img((250, 250, 250))
+    path = app.save_image(light, "bing")
+    app.history.add(light, "bing", path)
+
+    def fail(want_dark=True):
+        raise OSError("no network")
+
+    monkeypatch.setattr(app.sources, "fetch_bing", fail)
+    ok, msg = app.change_wallpaper()
+    assert not ok
+    assert "Não consegui" in msg
+
+
+def test_fallback_skips_the_current_wallpaper(bing_only, monkeypatch):
+    data = img((8, 8, 8))
+    path = app.save_image(data, "bing")
+    app.history.add(data, "bing", path)
+    app.state["last_path"] = str(path)
+
+    def fail(want_dark=True):
+        raise OSError("no network")
+
+    monkeypatch.setattr(app.sources, "fetch_bing", fail)
+    ok, _msg = app.change_wallpaper()
+    assert not ok
+
+
 def test_obtain_candidate_and_apply(bing_only, monkeypatch):
     monkeypatch.setattr(
         app.sources, "fetch_bing", lambda want_dark=True: img((10, 10, 10))

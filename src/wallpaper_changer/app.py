@@ -217,6 +217,30 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
             config.log("Error in %s: %r" % (name, e))
 
     msg = t("Não consegui obter uma imagem %s agora. %s") % (t(tone_name), last_error)
+
+    # Offline fallback: reuse a saved wallpaper with the right tone.
+    with _state_lock:
+        current = state.get("last_path")
+    fallback = history.pick_for_tone(want_dark, exclude=current)
+    if fallback is not None:
+        try:
+            platform.set_wallpaper(fallback)
+        except Exception as e:  # noqa: BLE001 - fall back to the error below
+            config.log("Fallback failed: %r" % e)
+        else:
+            with _state_lock:
+                state.update(
+                    last_change=datetime.now(),
+                    last_tone=tone_name,
+                    last_source=_source_key(fallback),
+                    last_path=str(fallback),
+                    last_error=None,
+                )
+            config.log("Fallback: reused saved wallpaper %s" % fallback)
+            return True, t(
+                "Sem imagens novas — reutilizei um wallpaper %s guardado."
+            ) % t(tone_name)
+
     with _state_lock:
         state["last_error"] = msg
     config.log(msg)
