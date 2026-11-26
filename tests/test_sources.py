@@ -53,7 +53,8 @@ def test_parse_bing_images():
     assert sources.parse_bing_images({}) == []
 
 
-def test_bing_returns_dark_and_tries_uhd(monkeypatch):
+def test_bing_returns_dark_and_tries_uhd(data_dir, monkeypatch):
+    config.set_key("resolution", "high")
     dark = img((5, 5, 5))
     calls = []
 
