@@ -55,7 +55,7 @@ def download(url: str, timeout: int = 30) -> bytes:
 def _acceptable(data: bytes, want_dark: bool) -> bool:
     """Valid image, with the requested tone, not used yet."""
     try:
-        if not tone.tone_matches(tone.mean_luminance(data), want_dark):
+        if not tone.tone_matches(tone.median_luminance(data), want_dark):
             return False
     except Exception:  # noqa: BLE001 - invalid image counts as not matching
         return False

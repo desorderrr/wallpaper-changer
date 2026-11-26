@@ -180,9 +180,12 @@ def _do_change(manual: bool = False) -> tuple[bool, str]:
         try:
             data = fetch(want_dark)
 
-            luma = tone.mean_luminance(data)
-            config.log("Source %s: luma=%.0f (wanted %s)" % (name, luma, tone_name))
-            if not tone.tone_matches(luma, want_dark):
+            median, mean = tone.luminance_profile(data)
+            config.log(
+                "Source %s: median=%.0f mean=%.0f (wanted %s)"
+                % (name, median, mean, tone_name)
+            )
+            if not tone.tone_matches(median, want_dark):
                 last_error = t("%s devolveu uma imagem com o tom errado") % name
                 continue
             if history.is_duplicate(data):
@@ -270,7 +273,7 @@ def obtain_candidate() -> tuple[bool, str, str | None]:
     for src, name, fetch in enabled:
         try:
             data = fetch(want_dark)
-            if not tone.tone_matches(tone.mean_luminance(data), want_dark):
+            if not tone.tone_matches(tone.median_luminance(data), want_dark):
                 errors.append(t("%s: tom errado") % name)
                 continue
             if history.is_duplicate(data):

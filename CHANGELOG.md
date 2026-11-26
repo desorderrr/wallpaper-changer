@@ -19,6 +19,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
   and `xrandr` on Linux, with a 1920 px fallback.
 - New `resolution` setting with validation/migration, plus a Resolution
   selector in Settings → General next to the language selector.
+- **Tone detection uses the median luminance** instead of the mean: a mostly
+  dark image with a bright area (or a mostly light one with a dark subject) is
+  now classified correctly. The history stores the median (`tone_luma`) and
+  old entries fall back to their mean; the log shows both values.
 - **Offline fallback**: when no source can provide a new image (network down,
   wrong tone or everything already used), the app reuses a saved wallpaper with
   the right tone instead of failing — it picks from the 20 most recent matches,

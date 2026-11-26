@@ -135,6 +135,9 @@ def _build_item(data: bytes, source: str, path=None) -> dict:
         "sha": sha,
         "ahash": ah,
         "luma": luma,
+        # Median luminance drives tone matching; "luma" (mean) stays for
+        # the duplicate heuristic and for history written by older versions.
+        "tone_luma": tone.median_luminance(data),
         "source": source,
         "ts": datetime.now().isoformat(timespec="seconds"),
         "path": str(path) if path else "",
@@ -192,7 +195,10 @@ def pick_for_tone(want_dark: bool, exclude: str | None = None) -> Path | None:
         path = item.get("path") or ""
         if not path or (exclude and path == exclude):
             continue
-        luma = item.get("luma")
+        # Older history entries only have the mean "luma"; use it as fallback.
+        luma = item.get("tone_luma")
+        if not isinstance(luma, (int, float)):
+            luma = item.get("luma")
         if not isinstance(luma, (int, float)):
             continue
         if not tone.tone_matches(float(luma), want_dark):

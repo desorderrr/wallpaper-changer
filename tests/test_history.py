@@ -92,3 +92,22 @@ def test_pick_for_tone_respects_exclude_and_missing_files(data_dir):
     assert history.pick_for_tone(True, exclude=str(path)) is None
     path.unlink()
     assert history.pick_for_tone(True) is None
+
+
+def test_item_stores_median_tone(data_dir):
+    history.add(jpg((10, 10, 10)), "bing", "x.jpg")
+    item = history._load()[-1]
+    assert item["tone_luma"] <= 115
+    assert "luma" in item  # mean kept for the duplicate heuristic
+
+
+def test_pick_for_tone_accepts_older_items_without_median(data_dir):
+    from wallpaper_changer import config
+
+    dark = jpg((10, 10, 10))
+    path = config.image_dir() / "bing_old.jpg"
+    path.write_bytes(dark)
+    history.add(dark, "bing", path)
+    history._load()[-1].pop("tone_luma", None)  # simulate an old entry
+
+    assert history.pick_for_tone(True) == path

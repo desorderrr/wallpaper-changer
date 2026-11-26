@@ -14,8 +14,9 @@ window.
 ## Features
 
 - **Guaranteed dark/light tones** — the app measures the real luminance of
-  every image before applying it; it never sets a light wallpaper in dark mode
-  (or vice versa)
+  every image before applying it (using the **median**, so a small bright sun
+  or a dark subject doesn't fool it); it never sets a light wallpaper in dark
+  mode (or vice versa)
 - **Follows the system theme** — on Windows it reads the "app mode"
   (`AppsUseLightTheme`) and the "Windows mode"; it also detects macOS and Linux
   (GNOME, KDE, XFCE, Cinnamon, MATE). When the theme changes, the wallpaper
