@@ -9,6 +9,19 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Resolution setting** — Auto (detects the widest monitor and picks 1080p,
+  1440p or 4K), High (4K) and Low (1080p). Unsplash, Wallhaven and Bing are
+  queried at the matching size (Unsplash quality adapts too) and oversized
+  downloads are downscaled before saving, saving bandwidth and disk space.
+  Screen detection uses `EnumDisplayMonitors` on Windows, `NSScreen` on macOS
+  and `xrandr` on Linux, with a 1920 px fallback.
+- New `resolution` setting with validation/migration, plus a Resolution
+  selector in Settings → General next to the language selector.
+- Tests for screen bucketing, per-source size parameters and the
+  downscale-on-save path.
+
 ### Fixed
 
 - CI flakiness on `windows-latest` / Python 3.10: the runner's Tcl/Tk install

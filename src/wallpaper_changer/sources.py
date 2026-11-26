@@ -13,7 +13,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from . import config, history, tone
+from . import config, history, resolution, tone
 from .i18n import t
 
 UA = {"User-Agent": config.APP_NAME}
@@ -105,9 +105,13 @@ def fetch_unsplash(want_dark: bool) -> bytes:
         raise RuntimeError(t("Sem resultados no Unsplash para: %s") % query)
 
     random.shuffle(results)
+    width = resolution.target_width()
+    quality = resolution.download_quality(width)
     for photo in results[:MAX_TONE_TRIES]:
         try:
-            data = download(photo["urls"]["raw"] + "&w=2560&q=80&fit=max")
+            data = download(
+                photo["urls"]["raw"] + "&w=%d&q=%d&fit=max" % (width, quality)
+            )
         except requests.RequestException:
             continue
         if _acceptable(data, want_dark):
@@ -162,17 +166,17 @@ def fetch_bing(want_dark: bool = True) -> bytes:
 
     head, tail = entries[:1], entries[1:]
     random.shuffle(tail)
+    width = resolution.target_width()
     for thumb, full in head + tail:
         try:
             # check the thumbnail first (fast) for tone and repetition
             if thumb and not _acceptable(download(thumb), want_dark):
                 continue
             try:
-                data = (
-                    download(full.replace("1920x1080", "UHD"))
-                    if "1920x1080" in full
-                    else download(full)
-                )
+                if width >= 2560 and "1920x1080" in full:
+                    data = download(full.replace("1920x1080", "UHD"))
+                else:
+                    data = download(full)
             except requests.RequestException:
                 data = download(full)
         except requests.RequestException:
@@ -187,9 +191,10 @@ def fetch_bing(want_dark: bool = True) -> bytes:
 # ---------------------------------------------------------------------------
 def fetch_wallhaven(want_dark: bool = True) -> bytes:
     api = "https://wallhaven.cc/api/v1/search"
+    width = resolution.target_width()
     base = {
         "sorting": "random",
-        "atleast": "2560x1440",
+        "atleast": "%dx%d" % (width, resolution.height_for(width)),
         "ratios": "landscape",
         "purity": "100",
         "categories": "111",

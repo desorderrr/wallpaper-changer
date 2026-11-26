@@ -33,6 +33,9 @@ window.
   - [Bing Photo of the Day](https://www.bing.com) — no sign-up, with variety
     from the last 8 days
   - **Pick just one source or combine several** (independent checkboxes)
+- **Resolution: Auto / High / Low** — Auto matches your screen (1080p, 1440p
+  or 4K) so images don't waste bandwidth; High forces 4K and Low 1080p.
+  Oversized downloads are downscaled before saving
 - **No repeats** — persistent history of used wallpapers (exact hash +
   perceptual hash, so the same photo is caught even when recompressed); each
   source tries other candidates until it finds a new one, and the gallery
@@ -145,6 +148,7 @@ src/wallpaper_changer/
 ├── app.py          # tray, scheduler, change logic, single instance
 ├── ui.py           # settings window (customtkinter)
 ├── i18n.py         # pt/en translations (in-code catalog, no .mo files)
+├── resolution.py   # screen detection and per-source target size
 ├── config.py       # settings, paths, migrations
 ├── history.py      # used-wallpaper history (no repeats)
 ├── sources.py      # Unsplash + Wallhaven + Bing

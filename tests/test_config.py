@@ -6,6 +6,7 @@ from wallpaper_changer import config
 def test_defaults(data_dir):
     assert config.get("interval") == "daily"
     assert config.get("theme_mode") == "auto"
+    assert config.get("resolution") == "auto"
     assert isinstance(config.get("queries_dark"), list)
 
 

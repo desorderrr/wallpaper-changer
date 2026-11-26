@@ -166,3 +166,81 @@ def test_wallhaven_wrong_tone_raises(monkeypatch):
     monkeypatch.setattr(sources, "_http_get", fake_get)
     with pytest.raises(RuntimeError, match="tom"):
         sources.fetch_wallhaven(True)
+
+
+# --- resolution -------------------------------------------------------------
+def test_unsplash_requests_target_width(data_dir, monkeypatch):
+    config.set_key("unsplash_key", "k")
+    config.set_key("resolution", "high")
+    downloads = []
+
+    def fake_get(url, *a, **k):
+        if "api.unsplash.com" in url:
+            return FakeResponse(
+                payload={"results": [{"urls": {"raw": "https://img.example/raw.jpg"}}]}
+            )
+        downloads.append(url)
+        return FakeResponse(content=img((5, 5, 5)))
+
+    monkeypatch.setattr(sources, "_http_get", fake_get)
+    sources.fetch_unsplash(True)
+    assert downloads
+    assert "w=3840" in downloads[0]
+
+
+def test_wallhaven_uses_resolution_bucket(data_dir, monkeypatch):
+    config.set_key("resolution", "low")
+    seen = []
+
+    def fake_get(url, *a, **k):
+        if "api/v1/search" in url:
+            seen.append(k.get("params") or {})
+            return FakeResponse(
+                payload={
+                    "data": [
+                        {
+                            "path": "https://w/full.jpg",
+                            "thumbs": {"large": "https://w/thumb.jpg"},
+                        }
+                    ]
+                }
+            )
+        return FakeResponse(content=img((8, 8, 8)))
+
+    monkeypatch.setattr(sources, "_http_get", fake_get)
+    assert sources.fetch_wallhaven(True) == img((8, 8, 8))
+    assert seen[0]["atleast"] == "1920x1080"
+
+
+def test_bing_low_skips_uhd(data_dir, monkeypatch):
+    config.set_key("resolution", "low")
+    calls = []
+
+    def fake_get(url, *a, **k):
+        calls.append(url)
+        if "HPImageArchive" in url:
+            return FakeResponse(
+                payload={"images": [{"url": "/th?id=OHR.A_1920x1080.jpg"}]}
+            )
+        return FakeResponse(content=img((5, 5, 5)))
+
+    monkeypatch.setattr(sources, "_http_get", fake_get)
+    sources.fetch_bing(True)
+    assert not any("UHD" in u for u in calls)
+
+
+def test_bing_high_tries_uhd(data_dir, monkeypatch):
+    config.set_key("resolution", "high")
+    calls = []
+
+    def fake_get(url, *a, **k):
+        calls.append(url)
+        if "HPImageArchive" in url:
+            return FakeResponse(
+                payload={"images": [{"url": "/th?id=OHR.A_1920x1080.jpg"}]}
+            )
+        return FakeResponse(content=img((5, 5, 5)))
+
+    monkeypatch.setattr(sources, "_http_get", fake_get)
+    sources.fetch_bing(True)
+    assert any("UHD" in u for u in calls)

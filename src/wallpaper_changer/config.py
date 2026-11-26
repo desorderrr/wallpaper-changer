@@ -23,6 +23,7 @@ DEFAULTS = {
     "interval": "daily",  # startup_only | 5m | 10m | 15m | 30m | 1h | 2h | 3h | 6h | 12h | daily
     "theme_mode": "auto",  # auto (follows system) | dark | light
     "language": "auto",  # auto (follows system) | pt | en
+    "resolution": "auto",  # auto (screen) | high (4K) | low (1080p)
     "use_unsplash": True,
     "use_bing": True,
     "use_wallhaven": False,
@@ -146,6 +147,9 @@ def load_settings() -> None:
         migrated = True
     if _settings.get("language") not in ("auto", "pt", "en"):
         _settings["language"] = "auto"
+        migrated = True
+    if _settings.get("resolution") not in ("auto", "high", "low"):
+        _settings["resolution"] = "auto"
         migrated = True
     try:
         keep = max(5, min(200, int(_settings.get("keep") or 20)))

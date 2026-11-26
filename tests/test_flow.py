@@ -214,6 +214,32 @@ def test_cleanup_keeps_only_limit(data_dir):
     assert len(list(config.image_dir().glob("*.jpg"))) == 3
 
 
+def test_save_image_downscales_to_resolution(data_dir, monkeypatch):
+    from wallpaper_changer import resolution
+
+    monkeypatch.setattr(resolution, "_screen_width", 1920)
+    config.set_key("resolution", "low")
+    big = io.BytesIO()
+    Image.new("RGB", (3840, 2160), (5, 5, 5)).save(big, "PNG")
+
+    path = app.save_image(big.getvalue(), "downscale")
+    with Image.open(path) as saved:
+        assert saved.size == (1920, 1080)
+
+
+def test_save_image_does_not_upscale(data_dir, monkeypatch):
+    from wallpaper_changer import resolution
+
+    monkeypatch.setattr(resolution, "_screen_width", 3840)
+    config.set_key("resolution", "high")
+    small = io.BytesIO()
+    Image.new("RGB", (1280, 720), (5, 5, 5)).save(small, "PNG")
+
+    path = app.save_image(small.getvalue(), "keep")
+    with Image.open(path) as saved:
+        assert saved.size == (1280, 720)
+
+
 def test_status_text_contains_state(bing_only):
     config.set_key("theme_mode", "dark")
     assert "escuro" in app.status_text()

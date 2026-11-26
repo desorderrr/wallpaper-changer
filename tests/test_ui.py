@@ -65,6 +65,7 @@ def test_settings_window_builds_and_saves(data_dir, tk_root):
     assert win.var_interval.get() in win._label_to_value
     assert hasattr(win, "var_wallhaven")
     assert hasattr(win, "var_paused")
+    assert hasattr(win, "var_res")
     assert win.tabs.tab("Pré-visualizar") is not None
 
     # pick an interval by label and make sure the id is what gets saved
@@ -73,6 +74,7 @@ def test_settings_window_builds_and_saves(data_dir, tk_root):
     assert saved
     assert saved["interval"] == "1h"
     assert saved["theme_mode"] in ("auto", "dark", "light")
+    assert saved["resolution"] in ("auto", "high", "low")
     assert isinstance(saved["queries_dark"], list)
     assert isinstance(saved["use_wallhaven"], bool)
     assert isinstance(saved["paused"], bool)
@@ -107,7 +109,9 @@ def test_settings_window_in_english(data_dir, tk_root, monkeypatch):
 
     win.var_interval.set("Every hour")
     win.var_lang.set("English")
+    win.var_res.set("High (4K)")
     win._save()
     assert saved["interval"] == "1h"
     assert saved["language"] == "en"
+    assert saved["resolution"] == "high"
     assert saved["theme_mode"] in ("auto", "dark", "light")

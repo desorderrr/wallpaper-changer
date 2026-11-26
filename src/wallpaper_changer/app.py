@@ -18,7 +18,7 @@ from datetime import datetime
 
 from PIL import Image
 
-from . import config, history, i18n, sources, tone
+from . import config, history, i18n, resolution, sources, tone
 from .assets import make_icon_image
 from .config import APP_NAME, APP_VERSION, INTERVALS, get
 from .i18n import t
@@ -116,6 +116,11 @@ def status_text() -> str:
 
 def save_image(img_bytes: bytes, prefix: str):
     img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    # Never store more pixels than the screen needs (big Wallhaven/Bing files).
+    target = resolution.target_width()
+    if img.width > target:
+        height = max(1, round(img.height * target / img.width))
+        img = img.resize((target, height), Image.LANCZOS)
     path = config.image_dir() / (
         "%s_%s.jpg" % (prefix, datetime.now().strftime("%Y%m%d_%H%M%S_%f"))
     )
@@ -375,6 +380,7 @@ def _apply_settings(values: dict) -> str | None:
             "unsplash_key": values["unsplash_key"],
             "theme_mode": values["theme_mode"],
             "language": values.get("language", "auto"),
+            "resolution": values.get("resolution", "auto"),
             "interval": values["interval"],
             "change_on_start": values["change_on_start"],
             "keep": values["keep"],

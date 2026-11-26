@@ -306,13 +306,33 @@ class SettingsWindow(ctk.CTkToplevel):
         )
         ctk.CTkLabel(keep_row, text=t("imagens")).pack(side="left")
 
-        # Language
-        self._build_language_row(box3)
+        # Resolution + language
+        self._build_options_row(box3)
 
-    def _build_language_row(self, parent) -> None:
-        lang_row = ctk.CTkFrame(parent, fg_color="transparent")
-        lang_row.grid(row=6, column=0, sticky="w", padx=12, pady=(0, 12))
-        ctk.CTkLabel(lang_row, text=t("Idioma")).pack(side="left")
+    def _build_options_row(self, parent) -> None:
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.grid(row=6, column=0, sticky="w", padx=12, pady=(0, 12))
+
+        ctk.CTkLabel(row, text=t("Resolução")).pack(side="left")
+        self._res_label_to_value = {
+            t("Automática (ecrã)"): "auto",
+            t("Alta (4K)"): "high",
+            t("Baixa (1080p)"): "low",
+        }
+        value_to_res_label = {v: k for k, v in self._res_label_to_value.items()}
+        self.var_res = tk.StringVar(
+            value=value_to_res_label.get(
+                get("resolution") or "auto", t("Automática (ecrã)")
+            )
+        )
+        ctk.CTkOptionMenu(
+            row,
+            values=list(self._res_label_to_value),
+            variable=self.var_res,
+            width=170,
+        ).pack(side="left", padx=(8, 28))
+
+        ctk.CTkLabel(row, text=t("Idioma")).pack(side="left")
         self._lang_label_to_value = {
             t("Automático"): "auto",
             t("Português"): "pt",
@@ -323,7 +343,7 @@ class SettingsWindow(ctk.CTkToplevel):
             value=value_to_lang_label.get(get("language") or "auto", t("Automático"))
         )
         ctk.CTkOptionMenu(
-            lang_row,
+            row,
             values=list(self._lang_label_to_value),
             variable=self.var_lang,
             width=140,
@@ -735,6 +755,7 @@ class SettingsWindow(ctk.CTkToplevel):
             "unsplash_key": self.var_key.get().strip(),
             "theme_mode": self._theme_label_to_value.get(self.theme_seg.get(), "auto"),
             "language": self._lang_label_to_value.get(self.var_lang.get(), "auto"),
+            "resolution": self._res_label_to_value.get(self.var_res.get(), "auto"),
             "interval": self._label_to_value.get(self.var_interval.get(), "daily"),
             "change_on_start": self.var_onstart.get(),
             "startup": self.var_startup.get(),
