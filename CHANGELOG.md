@@ -15,9 +15,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
   can be broken (`ttk/defaults.tcl` missing). UI tests now share a single Tk
   root and skip cleanly when Tk cannot be initialised. (The `v2.4.0` tag build
   passed with the same code — this was an environment issue.)
+- CI no longer fails when GitHub has no macOS arm64 runners available
+  ("The job was not acquired by Runner of type hosted"). macOS was removed
+  from the routine test matrix — its UI tests were already skipped there and
+  the pure-Python tests are covered by Windows/Linux. macOS is still built
+  and packaged on releases.
 
 ### Changed
 
+- CI matrix is now Windows + Linux × Python 3.10/3.12; builds run only for
+  `v*` tags or manual dispatch, and a `concurrency` group cancels superseded
+  runs so runners are not wasted.
 - **The whole repository is now in English**: README, CI job/step names,
   `.gitignore` comments, `pyproject.toml` metadata and ruff comments, all
   module/function docstrings and inline comments, log messages, build scripts

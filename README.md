@@ -156,8 +156,9 @@ src/wallpaper_changer/
     └── linux.py    # gsettings/qdbus/xfconf, XDG autostart
 ```
 
-CI: `.github/workflows/build.yml` tests and builds on all three platforms.
-Pushing a `v*` tag publishes a Release with the binaries.
+CI: `.github/workflows/build.yml` lints and tests on Windows and Linux
+(Python 3.10 and 3.12). Pushing a `v*` tag builds all three platforms and
+publishes a Release with the binaries.
 
 ```bash
 git tag v2.4.0 && git push origin v2.4.0
@@ -169,7 +170,7 @@ git tag v2.4.0 && git push origin v2.4.0
 |---|---|---|
 | Windows 11 | ✅ 64 tests | ✅ tested |
 | Linux (Ubuntu 26.04, WSL) | ✅ 64 tests (UI skipped without tkinter) | 🟡 tray not yet tested on a real desktop |
-| macOS | ✅ CI builds and runs the tests | 🧪 not yet tested on a MacBook |
+| macOS | ✅ CI builds the app on releases | 🧪 not yet tested on a MacBook |
 
 ## License
 
