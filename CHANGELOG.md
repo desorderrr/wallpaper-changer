@@ -7,7 +7,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 > From 2.4.0 onwards the changelog and commit messages are written in English.
 > The README and the app's Portuguese locale remain in Portuguese.
 
-## [Unreleased]
+## [2.5.0] — 2026-11-27
 
 ### Added
 

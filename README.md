@@ -179,8 +179,8 @@ git tag v2.4.0 && git push origin v2.4.0
 
 | Platform | Automated tests | Real-world run |
 |---|---|---|
-| Windows 11 | ✅ 64 tests | ✅ tested |
-| Linux (Ubuntu 26.04, WSL) | ✅ 64 tests (UI skipped without tkinter) | 🟡 tray not yet tested on a real desktop |
+| Windows 11 | ✅ 94 tests | ✅ tested |
+| Linux (Ubuntu 26.04, WSL) | ✅ 94 tests (UI skipped without tkinter) | 🟡 tray not yet tested on a real desktop |
 | macOS | ✅ CI builds the app on releases | 🧪 not yet tested on a MacBook |
 
 ## License
