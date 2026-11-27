@@ -99,7 +99,6 @@ CATALOGS: dict[str, dict[str, str]] = {
         "Escolher…": "Choose…",
         "Escolhe uma pasta com os teus wallpapers…": "Pick a folder with your own wallpapers…",
         "Escolhe a pasta dos teus wallpapers (ou desativa a fonte Pasta local).": "Pick your wallpapers folder (or disable the Local folder source).",
-        "Podes escolher só uma fonte ou combinar várias.": "You can pick a single source or combine several.",
         "Cola aqui a API key do Unsplash…": "Paste your Unsplash API key here…",
         "API key gratuita em unsplash.com/developers — só para o Unsplash. "
         "O Wallhaven e o Bing não precisam.": "Free API key at unsplash.com/developers — for Unsplash only. "
@@ -143,15 +142,17 @@ CATALOGS: dict[str, dict[str, str]] = {
         "Muda o wallpaper automaticamente, sempre a condizer com o "
         "tema do sistema: modo escuro → wallpapers escuros, modo "
         "claro → wallpapers claros.\n\n"
-        "Fontes: Unsplash (API key gratuita), Wallhaven (sem key) e "
-        "Bing Photo of the Day (sem registo).\n\n"
+        "Fontes: Unsplash (API key gratuita), Wallhaven (sem key), "
+        "Bing Photo of the Day (sem registo) e a tua própria pasta "
+        "(offline).\n\n"
         "Os wallpapers já usados ficam guardados num histórico — a app "
         "nunca repete uma imagem (podes esquecer o histórico aqui em baixo).\n\n"
         "Plataformas: Windows 11, macOS e Linux.": "Changes the wallpaper automatically, always matching the "
         "system theme: dark mode → dark wallpapers, light mode → "
         "light wallpapers.\n\n"
-        "Sources: Unsplash (free API key), Wallhaven (no key) and "
-        "Bing Photo of the Day (no sign-up).\n\n"
+        "Sources: Unsplash (free API key), Wallhaven (no key), "
+        "Bing Photo of the Day (no sign-up) and your own folder "
+        "(offline).\n\n"
         "Used wallpapers are kept in a history — the app never "
         "repeats an image (you can forget the history below).\n\n"
         "Platforms: Windows 11, macOS and Linux.",

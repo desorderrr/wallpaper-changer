@@ -67,8 +67,9 @@ window.
 
 ### Windows 11
 
-1. Download `WallpaperChanger.exe` from the [Releases](https://github.com/desorderrr/wallpaper-changer/releases)
-   page (or from the CI artifacts)
+1. Download `WallpaperChanger-windows.zip` from the
+   [Releases](https://github.com/desorderrr/wallpaper-changer/releases) page and
+   extract `WallpaperChanger.exe`
 2. Run the `.exe` — a **half-dark / half-light** icon appears in the tray
    (the `^` arrow next to the clock)
 3. Right-click the icon → **Settings...**
@@ -158,7 +159,7 @@ src/wallpaper_changer/
 ├── resolution.py   # screen detection and per-source target size
 ├── config.py       # settings, paths, migrations
 ├── history.py      # used-wallpaper history (no repeats)
-├── sources.py      # Unsplash + Wallhaven + Bing
+├── sources.py      # Unsplash + Wallhaven + Bing + local folder
 ├── tone.py         # luminance / tone matching
 ├── assets.py       # code-generated icon
 └── platform/
@@ -172,7 +173,7 @@ CI: `.github/workflows/build.yml` lints and tests on Windows and Linux
 publishes a Release with the binaries.
 
 ```bash
-git tag v2.4.0 && git push origin v2.4.0
+git tag v2.5.0 && git push origin v2.5.0
 ```
 
 ## Platform status
